@@ -1,34 +1,26 @@
-import { PageHeader } from "@/components/page-header";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { GraduationCap } from "lucide-react";
 
-export default function GradesPage() {
+import { PageHeader } from "@/components/page-header";
+import { getGrades } from "@/lib/data";
+import { GradesClient } from "./client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+export default async function GradesPage() {
+
+  const grades = await getGrades('org_1');
+
   return (
     <>
       <PageHeader
         title="Grades & Groups"
-        description="Register educational levels and specific groups."
+        description="Manage the educational levels and groups within your institution."
       />
       <Card>
         <CardHeader>
-          <CardTitle>Coming Soon</CardTitle>
-          <CardDescription>
-            This section will allow for managing grades and groups.
-          </CardDescription>
+            <CardTitle>Registered Grades</CardTitle>
+            <CardDescription>View and manage all grades and groups.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/50 p-12 text-center">
-            <GraduationCap className="h-10 w-10 text-muted-foreground" />
-            <p className="mt-4 text-sm font-medium text-muted-foreground">
-              Grades and groups management interface will be here.
-            </p>
-          </div>
+            <GradesClient data={grades} />
         </CardContent>
       </Card>
     </>
