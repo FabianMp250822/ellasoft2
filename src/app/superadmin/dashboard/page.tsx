@@ -1,6 +1,6 @@
 import { getOrganizations } from "@/lib/data";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building, Users, Database, AlertCircle, Sparkles } from "lucide-react";
 import { OrganizationsChart } from "./chart";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
