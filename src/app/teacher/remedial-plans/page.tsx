@@ -1,6 +1,7 @@
 "use client"
 
-import { useFormState, useFormStatus } from "react-dom"
+import { useActionState } from "react"
+import { useFormStatus } from "react-dom"
 import {
   Card,
   CardContent,
@@ -49,7 +50,7 @@ function SubmitButton() {
 }
 
 export default function RemedialPlansPage() {
-  const [state, formAction] = useFormState(generatePlanAction, initialState)
+  const [state, formAction] = useActionState(generatePlanAction, initialState)
 
   return (
     <div className="grid gap-8">

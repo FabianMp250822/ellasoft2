@@ -1,6 +1,7 @@
 "use client"
 
-import { useFormState, useFormStatus } from "react-dom"
+import { useActionState } from "react"
+import { useFormStatus } from "react-dom"
 import {
   Card,
   CardContent,
@@ -47,7 +48,7 @@ function SubmitButton() {
 }
 
 export default function PerformanceIndicatorsPage() {
-  const [state, formAction] = useFormState(generateIndicatorsAction, initialState)
+  const [state, formAction] = useActionState(generateIndicatorsAction, initialState)
 
   return (
     <div className="grid gap-8">
