@@ -5,22 +5,17 @@ service cloud.firestore {
   
     // HELPER FUNCTIONS
     
+    // Checks if the user is authenticated.
     function isSignedIn() {
       return request.auth != null;
     }
     
+    // Checks if the user has the 'superadmin' custom claim.
     function isSuperAdmin() {
       return isSignedIn() && request.auth.token.superadmin == true;
     }
     
-    // Checks if the user is requesting documents for their own organization.
-    // This is used for LIST queries where we don't have a single resource.
-    function isRequestingOwnOrgData() {
-      return isSignedIn() && request.auth.token.organizationId == request.query.resource.data.organizationId;
-    }
-
     // Checks if the user belongs to the organization that owns the resource.
-    // This is used for GET, UPDATE, DELETE on a single document.
     function isResourceOwner(resource) {
       return isSignedIn() && request.auth.token.organizationId == resource.data.organizationId;
     }
@@ -37,67 +32,29 @@ service cloud.firestore {
 
     // RULES FOR TENANT-SPECIFIC COLLECTIONS
     
-    match /subjects/{docId} {
-      // Allow GET on a single doc if owner, or LIST if querying for own org.
-      allow read: if isResourceOwner(resource) || isRequestingOwnOrgData() || isSuperAdmin();
-      allow delete: if isResourceOwner(resource) || isSuperAdmin();
-      allow create: if isCreatingForOwnOrg() || isSuperAdmin();
-      allow update: if (isResourceOwner(resource) && isNotChangingOrgId()) || isSuperAdmin();
+    // Generic rule for tenant collections that can be read via a query.
+    match /{collection}/{docId}
+      where collection in ['subjects', 'grades', 'students', 'teachers', 'academicPeriods', 'gradingSystems', 'performanceIndicators', 'academicLoads'] {
+        allow read: if (isSignedIn() && (
+                      // For single doc gets
+                      get(/databases/$(database)/documents/$(collection)/$(docId)).data.organizationId == request.auth.token.organizationId
+                    )) || isSuperAdmin();
+        allow list: if (isSignedIn() && request.query.where[0][2] == request.auth.token.organizationId) || isSuperAdmin();
+        allow create: if isCreatingForOwnOrg() || isSuperAdmin();
+        allow update, delete: if isResourceOwner(resource) || isSuperAdmin();
     }
     
-    match /grades/{docId} {
-      allow read: if isResourceOwner(resource) || isRequestingOwnOrgData() || isSuperAdmin();
-      allow delete: if isResourceOwner(resource) || isSuperAdmin();
-      allow create: if isCreatingForOwnOrg() || isSuperAdmin();
-      allow update: if (isResourceOwner(resource) && isNotChangingOrgId()) || isSuperAdmin();
-    }
-    
-    match /students/{docId} {
-      allow read: if isResourceOwner(resource) || isRequestingOwnOrgData() || isSuperAdmin();
-      allow delete: if isResourceOwner(resource) || isSuperAdmin();
-      allow create: if isCreatingForOwnOrg() || isSuperAdmin();
-      allow update: if (isResourceOwner(resource) && isNotChangingOrgId()) || isSuperAdmin();
-    }
-    
-    match /teachers/{docId} {
-      allow read: if isResourceOwner(resource) || isRequestingOwnOrgData() || isSuperAdmin();
-      allow delete: if isResourceOwner(resource) || isSuperAdmin();
-      allow create: if isCreatingForOwnOrg() || isSuperAdmin();
-      allow update: if (isResourceOwner(resource) && isNotChangingOrgId()) || isSuperAdmin();
-    }
-
-    match /academicPeriods/{docId} {
-      allow read: if isResourceOwner(resource) || isRequestingOwnOrgData() || isSuperAdmin();
-      allow delete: if isResourceOwner(resource) || isSuperAdmin();
-      allow create: if isCreatingForOwnOrg() || isSuperAdmin();
-      allow update: if (isResourceOwner(resource) && isNotChangingOrgId()) || isSuperAdmin();
-    }
-
-    match /gradingSystems/{docId} {
-      allow read: if isResourceOwner(resource) || isRequestingOwnOrgData() || isSuperAdmin();
-      allow delete: if isResourceOwner(resource) || isSuperAdmin();
-      allow create: if isCreatingForOwnOrg() || isSuperAdmin();
-      allow update: if (isResourceOwner(resource) && isNotChangingOrgId()) || isSuperAdmin();
-    }
-
-    match /performanceIndicators/{docId} {
-      allow read: if isResourceOwner(resource) || isRequestingOwnOrgData() || isSuperAdmin();
-      allow delete: if isResourceOwner(resource) || isSuperAdmin();
-      allow create: if isCreatingForOwnOrg() || isSuperAdmin();
-      allow update: if (isResourceOwner(resource) && isNotChangingOrgId()) || isSuperAdmin();
-    }
-
-    match /academicLoads/{docId} {
-      allow read: if isResourceOwner(resource) || isRequestingOwnOrgData() || isSuperAdmin();
-      allow delete: if isResourceOwner(resource) || isSuperAdmin();
-      allow create: if isCreatingForOwnOrg() || isSuperAdmin();
-      allow update: if (isResourceOwner(resource) && isNotChangingOrgId()) || isSuperAdmin();
-    }
-
     // RULES FOR SUPERADMIN-ONLY COLLECTIONS
     
     match /organizations/{orgId} {
-      allow read, write: if isSuperAdmin();
+      allow read: if isSignedIn(); // Allow any signed-in user to read the list of orgs
+      allow write: if isSuperAdmin(); // Only superadmins can create, update, or delete orgs
     }
+
+    match /users/{userId} {
+      allow read: if request.auth.uid == userId || isSuperAdmin();
+      allow write: if isSuperAdmin();
+    }
+    
   }
 }
