@@ -224,7 +224,7 @@ export function OrganizationsClient({ data }: { data: Organization[] }) {
                     <div className="font-medium">{org.admin}</div>
                     <div className="text-sm text-muted-foreground">{org.email}</div>
                   </TableCell>
-                  <TableCell>{new Date(org.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell>{new Date(org.createdAt).toLocaleDateString('en-US', { timeZone: 'UTC' })}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
