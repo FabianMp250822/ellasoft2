@@ -11,13 +11,14 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Ban, PlayCircle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -41,7 +42,7 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import type { Organization } from "@/lib/data";
 import Image from "next/image";
-import { createOrganizationAction } from "./actions";
+import { createOrganizationAction, suspendOrganizationAction } from "./actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 
@@ -49,10 +50,11 @@ type FormValues = {
   orgName: string;
   orgAddress: string;
   orgPhone: string;
-  orgEmail: string;
+  orgEmail:string;
   orgNit: string;
   orgDane: string;
   orgLogo: FileList;
+  userLimit: number;
   adminFirstName: string;
   adminLastName: string;
   adminPhone: string;
@@ -77,7 +79,7 @@ function CreateOrganizationForm({ onClose }: { onClose: () => void }) {
           formData.append(key, value[0]);
         }
       } else {
-        formData.append(key, value);
+        formData.append(key, String(value));
       }
     });
 
@@ -113,6 +115,19 @@ function CreateOrganizationForm({ onClose }: { onClose: () => void }) {
                 {errors.orgName && (
                   <p className="text-destructive text-sm">
                     {errors.orgName.message}
+                  </p>
+                )}
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="userLimit">User Limit</Label>
+                <Input
+                  id="userLimit"
+                  type="number"
+                  {...register("userLimit", { required: "User limit is required", valueAsNumber: true, min: 1 })}
+                />
+                {errors.userLimit && (
+                  <p className="text-destructive text-sm">
+                    {errors.userLimit.message}
                   </p>
                 )}
               </div>
@@ -315,31 +330,43 @@ function CreateOrganizationForm({ onClose }: { onClose: () => void }) {
 
 export function OrganizationsClient({ data }: { data: Organization[] }) {
   const [isDialogOpen, setDialogOpen] = React.useState(false);
+  const { toast } = useToast();
+
+  const handleSuspend = async (orgId: string, currentStatus: "Active" | "Suspended") => {
+    const newStatus = currentStatus === "Active" ? "Suspended" : "Active";
+    const result = await suspendOrganizationAction(orgId, newStatus);
+    if (result.success) {
+      toast({ title: "Success", description: `Organization has been ${newStatus.toLowerCase()}.` });
+    } else {
+      toast({ title: "Error", description: result.message, variant: "destructive" });
+    }
+  }
 
   return (
     <>
-      <div className="flex items-center justify-end">
-        <Button size="sm" className="gap-1" onClick={() => setDialogOpen(true)}>
-          <PlusCircle className="h-4 w-4" />
-          Create Organization
-        </Button>
-      </div>
-
-      <Card className="mt-4">
+      <Card>
         <CardHeader>
-          <CardTitle className="font-headline">Tenant Institutions</CardTitle>
-          <CardDescription>
-            A list of all organizations currently using EduAI.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+                <CardTitle className="font-headline">Tenant Institutions</CardTitle>
+                <CardDescription>
+                A list of all organizations currently using EduAI.
+                </CardDescription>
+            </div>
+            <Button size="sm" className="gap-1" onClick={() => setDialogOpen(true)}>
+              <PlusCircle className="h-4 w-4" />
+              Create Organization
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Organization Name</TableHead>
+                <TableHead>Organization</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Admin</TableHead>
-                <TableHead>Created At</TableHead>
+                <TableHead>Users</TableHead>
+                <TableHead>Data</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -348,38 +375,38 @@ export function OrganizationsClient({ data }: { data: Organization[] }) {
             <TableBody>
               {data.map((org) => (
                 <TableRow key={org.id}>
-                  <TableCell className="font-medium flex items-center gap-3">
-                    {org.logoUrl && (
-                      <Image
-                        src={org.logoUrl}
-                        alt={org.name}
-                        width={32}
-                        height={32}
-                        className="rounded-md"
-                        data-ai-hint="logo"
-                      />
-                    )}
-                    {org.name}
+                  <TableCell className="font-medium">
+                     <div className="flex items-center gap-3">
+                        {org.logoUrl && (
+                        <Image
+                            src={org.logoUrl}
+                            alt={org.name}
+                            width={32}
+                            height={32}
+                            className="rounded-md"
+                            data-ai-hint="logo"
+                        />
+                        )}
+                        <div className="flex flex-col">
+                           <span className="font-semibold">{org.name}</span>
+                           <span className="text-xs text-muted-foreground">{org.email}</span>
+                        </div>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge
-                      variant={org.status === "Active" ? "default" : "secondary"}
+                      variant={org.status === "Active" ? "default" : "destructive"}
                     >
                       {org.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <div className="font-medium">{org.admin}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {org.email}
-                    </div>
+                   <TableCell>
+                    <div className="font-medium">{org.userCount} / {org.userLimit}</div>
                   </TableCell>
-                  <TableCell>
-                    {new Date(org.createdAt).toLocaleDateString("en-US", {
-                      timeZone: "UTC",
-                    })}
+                   <TableCell>
+                    <div className="font-medium">{(org.dataConsumption || 0).toFixed(2)} GB</div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -394,9 +421,18 @@ export function OrganizationsClient({ data }: { data: Organization[] }) {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
-                          Deactivate
-                        </DropdownMenuItem>
+                        <DropdownMenuSeparator/>
+                        {org.status === 'Active' ? (
+                            <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={() => handleSuspend(org.id, org.status)}>
+                                <Ban className="mr-2 h-4 w-4"/>
+                                Suspend
+                            </DropdownMenuItem>
+                        ) : (
+                            <DropdownMenuItem className="text-green-600 focus:bg-green-100 focus:text-green-700" onClick={() => handleSuspend(org.id, org.status)}>
+                                <PlayCircle className="mr-2 h-4 w-4"/>
+                                Reactivate
+                            </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

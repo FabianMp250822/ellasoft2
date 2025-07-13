@@ -87,6 +87,9 @@ export const createOrganization = functions.https.onRequest(async (req, res) => 
           nit: fields.orgNit,
           dane: fields.orgDane,
           logoUrl,
+          userLimit: parseInt(fields.userLimit, 10) || 100, // Default to 100 if not provided
+          userCount: 1, // Starts with the admin user
+          dataConsumption: 0,
           adminId: adminUser.uid,
           adminName: `${fields.adminFirstName} ${fields.adminLastName}`,
           adminPhotoUrl,

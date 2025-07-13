@@ -8,9 +8,12 @@ export type Organization = {
     name: string;
     admin: string;
     email: string;
-    status: "Active" | "Inactive";
+    status: "Active" | "Suspended";
     createdAt: string;
     logoUrl?: string;
+    userLimit: number;
+    userCount: number;
+    dataConsumption: number; // in GB
 };
 
 export type AcademicPeriod = {
