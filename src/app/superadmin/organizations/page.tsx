@@ -1,6 +1,6 @@
 import { getOrganizations } from "@/lib/data";
 import { PageHeader } from "@/components/page-header";
-import { OrganizationsClient } from "../dashboard/client";
+import { OrganizationsClient } from "./client";
 
 export default async function OrganizationsPage() {
   const organizations = await getOrganizations();

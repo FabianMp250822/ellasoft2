@@ -8,7 +8,7 @@ export type Organization = {
     name: string;
     admin: string;
     email: string;
-    status: "Active" | "Suspended";
+    status: "Active" | "Suspended" | "In Arrears";
     createdAt: string;
     logoUrl?: string;
     userLimit: number;
@@ -47,7 +47,13 @@ export type Subject = {
 };
 
 
-let mockOrganizations: Organization[] = [];
+let mockOrganizations: Organization[] = [
+    { id: "org_1", name: "Greenwood High", admin: "Alice Martin", email: "alice.m@greenwood.edu", status: "Active", createdAt: "2023-10-01", logoUrl: "https://placehold.co/40x40.png", userLimit: 100, userCount: 85, dataConsumption: 12.5 },
+    { id: "org_2", name: "Oak Valley Academy", admin: "David Chen", email: "d.chen@oakvalley.org", status: "Active", createdAt: "2023-09-15", logoUrl: "https://placehold.co/40x40.png", userLimit: 200, userCount: 198, dataConsumption: 25.1 },
+    { id: "org_3", name: "Maple Creek Institute", admin: "Sophia Rodriguez", email: "sophia.r@maple.edu", status: "Suspended", createdAt: "2024-01-20", logoUrl: "https://placehold.co/40x40.png", userLimit: 50, userCount: 45, dataConsumption: 5.2 },
+    { id: "org_4", name: "Pine Ridge School", admin: "Michael Brown", email: "mbrown@pineridge.edu", status: "In Arrears", createdAt: "2022-08-10", logoUrl: "https://placehold.co/40x40.png", userLimit: 150, userCount: 120, dataConsumption: 18.9 },
+    { id: "org_5", name: "Riverdale Prep", admin: "Jessica Wong", email: "jwong@riverdale.org", status: "Active", createdAt: "2023-11-05", logoUrl: "https://placehold.co/40x40.png", userLimit: 300, userCount: 250, dataConsumption: 30.0 },
+];
 
 let mockAcademicPeriods: AcademicPeriod[] = [
     { id: 'period_1', organizationId: 'org_1', name: 'Semester 1 2024', startDate: new Date('2024-01-15'), endDate: new Date('2024-06-30') },
