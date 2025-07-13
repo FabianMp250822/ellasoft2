@@ -10,6 +10,7 @@ export type Organization = {
     email: string;
     status: "Active" | "Inactive";
     createdAt: string;
+    logoUrl?: string;
 };
 
 export type AcademicPeriod = {
@@ -43,11 +44,7 @@ export type Subject = {
 };
 
 
-let mockOrganizations: Organization[] = [
-    { id: "org_1", name: "Greenwood High", admin: "Alice Martin", email: "alice.m@greenwood.edu", status: "Active", createdAt: "2023-10-01" },
-    { id: "org_2", name: "Oak Valley Academy", admin: "David Chen", email: "d.chen@oakvalley.org", status: "Active", createdAt: "2023-09-15" },
-    { id: "org_3", name: "Maple Creek Institute", admin: "Sophia Rodriguez", email: "sophia.r@maple.edu", status: "Inactive", createdAt: "2024-01-20" },
-];
+let mockOrganizations: Organization[] = [];
 
 let mockAcademicPeriods: AcademicPeriod[] = [
     { id: 'period_1', organizationId: 'org_1', name: 'Semester 1 2024', startDate: new Date('2024-01-15'), endDate: new Date('2024-06-30') },
@@ -76,6 +73,9 @@ const newId = () => `id_${Math.random().toString(36).substr(2, 9)}`;
 
 // Organizations
 export async function getOrganizations(): Promise<Organization[]> {
+    // In a real app, this would fetch from Firestore
+    // const snapshot = await firestore.collection('organizations').get();
+    // return snapshot.docs.map(doc => doc.data() as Organization);
     return Promise.resolve(mockOrganizations);
 }
 
