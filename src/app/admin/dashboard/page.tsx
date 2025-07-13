@@ -10,10 +10,13 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
 import { ArrowRight, CalendarDays, Scaling, GraduationCap, Book, ClipboardList, BookUser, Users, FileClock, CheckCircle2 } from "lucide-react";
 import { getSetupStatus } from "@/lib/data";
+import { auth } from "@/lib/firebase";
+
 
 export default async function AdminDashboard() {
-
-  const setupStatus = await getSetupStatus("org_1");
+  // In a real app, organizationId would come from the user's custom claims
+  const organizationId = 'org_1'; // Replace with dynamic organizationId
+  const setupStatus = await getSetupStatus(organizationId);
 
   const setupSteps = [
     {

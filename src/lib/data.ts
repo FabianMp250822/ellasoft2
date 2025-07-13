@@ -1,13 +1,25 @@
-// This file contains functions to simulate fetching data from a database like Firestore.
-// The data is hardcoded for demonstration purposes.
-// In a real application, these functions would make async calls to Firestore
-// and would be filtered by the user's organizationId.
+// This file contains functions to fetch data from Firestore.
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  getDoc,
+  limit,
+} from "firebase/firestore";
+import { db } from "./firebase"; // We need to create this file to initialize firebase
 
 export type Organization = {
     id: string;
     name: string;
-    admin: string;
-    email: string;
+    admin: string; // admin user's name
+    adminId: string; // admin user's uid
+    adminPhotoUrl: string;
+    email: string; // organization's email
     status: "Active" | "Suspended" | "In Arrears";
     createdAt: string;
     logoUrl?: string;
@@ -47,146 +59,160 @@ export type Subject = {
 };
 
 
-let mockOrganizations: Organization[] = [
-    { id: "org_1", name: "Greenwood High", admin: "Alice Martin", email: "alice.m@greenwood.edu", status: "Active", createdAt: "2023-10-01", logoUrl: "https://placehold.co/40x40.png", userLimit: 100, userCount: 85, dataConsumption: 12.5 },
-    { id: "org_2", name: "Oak Valley Academy", admin: "David Chen", email: "d.chen@oakvalley.org", status: "Active", createdAt: "2023-09-15", logoUrl: "https://placehold.co/40x40.png", userLimit: 200, userCount: 198, dataConsumption: 25.1 },
-    { id: "org_3", name: "Maple Creek Institute", admin: "Sophia Rodriguez", email: "sophia.r@maple.edu", status: "Suspended", createdAt: "2024-01-20", logoUrl: "https://placehold.co/40x40.png", userLimit: 50, userCount: 45, dataConsumption: 5.2 },
-    { id: "org_4", name: "Pine Ridge School", admin: "Michael Brown", email: "mbrown@pineridge.edu", status: "In Arrears", createdAt: "2022-08-10", logoUrl: "https://placehold.co/40x40.png", userLimit: 150, userCount: 120, dataConsumption: 18.9 },
-    { id: "org_5", name: "Riverdale Prep", admin: "Jessica Wong", email: "jwong@riverdale.org", status: "Active", createdAt: "2023-11-05", logoUrl: "https://placehold.co/40x40.png", userLimit: 300, userCount: 250, dataConsumption: 30.0 },
-];
-
-let mockAcademicPeriods: AcademicPeriod[] = [
-    { id: 'period_1', organizationId: 'org_1', name: 'Semester 1 2024', startDate: new Date('2024-01-15'), endDate: new Date('2024-06-30') },
-    { id: 'period_2', organizationId: 'org_1', name: 'Semester 2 2024', startDate: new Date('2024-07-15'), endDate: new Date('2024-12-15') },
-];
-
-let mockGradingSystems: GradingSystem[] = [
-    { id: 'gs_1', organizationId: 'org_1', name: 'Numerical 0-5', description: 'Standard numerical scale from 0.0 to 5.0, with 3.0 being the passing grade.', scale: '0.0-5.0' },
-    { id: 'gs_2', organizationId: 'org_1', name: 'Conceptual', description: 'Performance levels: Low, Basic, High, Superior.', scale: 'Conceptual' },
-];
-
-let mockGrades: Grade[] = [
-    { id: 'grade_1', organizationId: 'org_1', name: '11th Grade', groupName: 'A' },
-    { id: 'grade_2', organizationId: 'org_1', name: '11th Grade', groupName: 'B' },
-    { id: 'grade_3', organizationId: 'org_1', name: '9th Grade', groupName: 'A' },
-];
-
-let mockSubjects: Subject[] = [
-    { id: 'subj_1', organizationId: 'org_1', name: 'Calculus', description: 'Differential and integral calculus.' },
-    { id: 'subj_2', organizationId: 'org_1', name: 'Physics', description: 'Mechanics and thermodynamics.' },
-    { id: 'subj_3', organizationId: 'org_1', name: 'Art History', description: 'From Renaissance to Modernism.' },
-];
-
-const newId = () => `id_${Math.random().toString(36).substr(2, 9)}`;
-
-
 // Organizations
 export async function getOrganizations(): Promise<Organization[]> {
-    // In a real app, this would fetch from Firestore
-    // const snapshot = await firestore.collection('organizations').get();
-    // return snapshot.docs.map(doc => doc.data() as Organization);
-    return Promise.resolve(mockOrganizations);
+  const orgsCol = collection(db, "organizations");
+  const orgsSnapshot = await getDocs(orgsCol);
+  const orgsList = orgsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Organization));
+  return orgsList;
 }
 
 // Academic Periods
 export async function getAcademicPeriods(organizationId: string): Promise<AcademicPeriod[]> {
-    return Promise.resolve(mockAcademicPeriods.filter(p => p.organizationId === organizationId));
+    const periodsCol = collection(db, "academicPeriods");
+    const q = query(periodsCol, where("organizationId", "==", organizationId));
+    const periodsSnapshot = await getDocs(q);
+    const periodsList = periodsSnapshot.docs.map(d => {
+        const data = d.data();
+        return {
+            id: d.id,
+            ...data,
+            startDate: data.startDate.toDate(),
+            endDate: data.endDate.toDate(),
+        } as AcademicPeriod;
+    });
+    return periodsList;
 }
 
 export async function addAcademicPeriod(organizationId: string, period: Omit<AcademicPeriod, 'id' | 'organizationId'>) {
-    const newPeriod: AcademicPeriod = { id: newId(), organizationId, ...period };
-    mockAcademicPeriods.push(newPeriod);
-    return Promise.resolve(newPeriod);
+    const periodsCol = collection(db, "academicPeriods");
+    const docRef = await addDoc(periodsCol, { organizationId, ...period });
+    return { id: docRef.id, organizationId, ...period };
 }
 
-export async function updateAcademicPeriod(id: string, period: Partial<AcademicPeriod>) {
-    mockAcademicPeriods = mockAcademicPeriods.map(p => p.id === id ? { ...p, ...period } : p);
-    return Promise.resolve();
+export async function updateAcademicPeriod(id: string, period: Partial<Omit<AcademicPeriod, 'id' | 'organizationId'>>) {
+    const periodDoc = doc(db, "academicPeriods", id);
+    await updateDoc(periodDoc, period);
 }
 
 export async function deleteAcademicPeriod(id: string) {
-    mockAcademicPeriods = mockAcademicPeriods.filter(p => p.id !== id);
-    return Promise.resolve();
+    const periodDoc = doc(db, "academicPeriods", id);
+    await deleteDoc(periodDoc);
 }
 
 
 // Grading Systems
 export async function getGradingSystems(organizationId: string): Promise<GradingSystem[]> {
-    return Promise.resolve(mockGradingSystems.filter(gs => gs.organizationId === organizationId));
+    const systemsCol = collection(db, "gradingSystems");
+    const q = query(systemsCol, where("organizationId", "==", organizationId));
+    const systemsSnapshot = await getDocs(q);
+    return systemsSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as GradingSystem));
 }
 
 export async function addGradingSystem(organizationId: string, system: Omit<GradingSystem, 'id' | 'organizationId'>) {
-    const newSystem: GradingSystem = { id: newId(), organizationId, ...system };
-    mockGradingSystems.push(newSystem);
-    return Promise.resolve(newSystem);
+    const systemsCol = collection(db, "gradingSystems");
+    const docRef = await addDoc(systemsCol, { organizationId, ...system });
+    return { id: docRef.id, organizationId, ...system };
 }
 
-export async function updateGradingSystem(id: string, system: Partial<GradingSystem>) {
-    mockGradingSystems = mockGradingSystems.map(gs => gs.id === id ? { ...gs, ...system } : gs);
-    return Promise.resolve();
+export async function updateGradingSystem(id: string, system: Partial<Omit<GradingSystem, 'id' | 'organizationId'>>) {
+    const systemDoc = doc(db, "gradingSystems", id);
+    await updateDoc(systemDoc, system);
 }
 
 export async function deleteGradingSystem(id: string) {
-    mockGradingSystems = mockGradingSystems.filter(gs => gs.id !== id);
-    return Promise.resolve();
+    const systemDoc = doc(db, "gradingSystems", id);
+    await deleteDoc(systemDoc);
 }
 
 
 // Grades
 export async function getGrades(organizationId: string): Promise<Grade[]> {
-    return Promise.resolve(mockGrades.filter(g => g.organizationId === organizationId));
+    const gradesCol = collection(db, "grades");
+    const q = query(gradesCol, where("organizationId", "==", organizationId));
+    const gradesSnapshot = await getDocs(q);
+    return gradesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Grade));
 }
 
 export async function addGrade(organizationId: string, grade: Omit<Grade, 'id' | 'organizationId'>) {
-    const newGrade: Grade = { id: newId(), organizationId, ...grade };
-    mockGrades.push(newGrade);
-    return Promise.resolve(newGrade);
+    const gradesCol = collection(db, "grades");
+    const docRef = await addDoc(gradesCol, { organizationId, ...grade });
+    return { id: docRef.id, organizationId, ...grade };
 }
 
-export async function updateGrade(id: string, grade: Partial<Grade>) {
-    mockGrades = mockGrades.map(g => g.id === id ? { ...g, ...grade } : g);
-    return Promise.resolve();
+export async function updateGrade(id: string, grade: Partial<Omit<Grade, 'id' | 'organizationId'>>) {
+    const gradeDoc = doc(db, "grades", id);
+    await updateDoc(gradeDoc, grade);
 }
 
 export async function deleteGrade(id: string) {
-    mockGrades = mockGrades.filter(g => g.id !== id);
-    return Promise.resolve();
+    const gradeDoc = doc(db, "grades", id);
+    await deleteDoc(gradeDoc);
 }
 
 
 // Subjects
 export async function getSubjects(organizationId: string): Promise<Subject[]> {
-    return Promise.resolve(mockSubjects.filter(s => s.organizationId === organizationId));
+    const subjectsCol = collection(db, "subjects");
+    const q = query(subjectsCol, where("organizationId", "==", organizationId));
+    const subjectsSnapshot = await getDocs(q);
+    return subjectsSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Subject));
 }
 
 export async function addSubject(organizationId: string, subject: Omit<Subject, 'id' | 'organizationId'>) {
-    const newSubject: Subject = { id: newId(), organizationId, ...subject };
-    mockSubjects.push(newSubject);
-    return Promise.resolve(newSubject);
+    const subjectsCol = collection(db, "subjects");
+    const docRef = await addDoc(subjectsCol, { organizationId, ...subject });
+    return { id: docRef.id, organizationId, ...subject };
 }
 
-export async function updateSubject(id: string, subject: Partial<Subject>) {
-    mockSubjects = mockSubjects.map(s => s.id === id ? { ...s, ...subject } : s);
-    return Promise.resolve();
+export async function updateSubject(id: string, subject: Partial<Omit<Subject, 'id' | 'organizationId'>>) {
+    const subjectDoc = doc(db, "subjects", id);
+    await updateDoc(subjectDoc, subject);
 }
 
 export async function deleteSubject(id: string) {
-    mockSubjects = mockSubjects.filter(s => s.id !== id);
-    return Promise.resolve();
+    const subjectDoc = doc(db, "subjects", id);
+    await deleteDoc(subjectDoc);
 }
 
 
 // Admin Dashboard Setup Status
+async function checkCollection(collectionName: string, organizationId: string): Promise<boolean> {
+    const colRef = collection(db, collectionName);
+    const q = query(colRef, where("organizationId", "==", organizationId), limit(1));
+    const snapshot = await getDocs(q);
+    return !snapshot.empty;
+}
+
 export async function getSetupStatus(organizationId: string) {
-    // In a real app, you would query each collection
-    return Promise.resolve({
-      periods: (await getAcademicPeriods(organizationId)).length > 0,
-      gradingSystems: (await getGradingSystems(organizationId)).length > 0,
-      grades: (await getGrades(organizationId)).length > 0,
-      subjects: (await getSubjects(organizationId)).length > 0,
-      indicators: false, // You would check the performanceIndicators collection
-      teachers: false,   // You would check the teachers collection
-      students: false,   // You would check the students collection
-      academicLoad: false, // You would check the academicLoad collection
-    });
+    const [
+        periods,
+        gradingSystems,
+        grades,
+        subjects,
+        // indicators, // Assuming collections exist for these
+        // teachers,
+        // students,
+        // academicLoad
+    ] = await Promise.all([
+        checkCollection("academicPeriods", organizationId),
+        checkCollection("gradingSystems", organizationId),
+        checkCollection("grades", organizationId),
+        checkCollection("subjects", organizationId),
+        // checkCollection("performanceIndicators", organizationId),
+        // checkCollection("teachers", organizationId),
+        // checkCollection("students", organizationId),
+        // checkCollection("academicLoad", organizationId),
+    ]);
+
+    return {
+      periods,
+      gradingSystems,
+      grades,
+      subjects,
+      indicators: false,
+      teachers: false,
+      students: false,
+      academicLoad: false,
+    };
 }

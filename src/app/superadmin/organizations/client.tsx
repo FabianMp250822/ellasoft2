@@ -45,7 +45,7 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import type { Organization } from "@/lib/data";
 import Image from "next/image";
-import { createOrganizationAction, suspendOrganizationAction } from "./actions";
+import { createOrganizationAction, setOrganizationStatusAction } from "./actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 
@@ -333,10 +333,10 @@ function CreateOrganizationForm({ onClose }: { onClose: () => void }) {
 
 function OrganizationTable({
   organizations,
-  onSuspend,
+  onStatusChange,
 }: {
   organizations: Organization[];
-  onSuspend: (orgId: string, status: Organization["status"]) => void;
+  onStatusChange: (orgId: string, status: Organization["status"]) => void;
 }) {
   return (
     <Card>
@@ -391,7 +391,7 @@ function OrganizationTable({
                 </TableCell>
                 <TableCell>
                   <div className="font-medium">
-                    {org.userCount} / {org.userLimit}
+                    {org.userCount || 0} / {org.userLimit}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -414,7 +414,7 @@ function OrganizationTable({
                       {org.status === "Active" ? (
                         <DropdownMenuItem
                           className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                          onClick={() => onSuspend(org.id, org.status)}
+                          onClick={() => onStatusChange(org.id, "Suspended")}
                         >
                           <Ban className="mr-2 h-4 w-4" />
                           Suspend
@@ -422,7 +422,7 @@ function OrganizationTable({
                       ) : (
                         <DropdownMenuItem
                           className="text-green-600 focus:bg-green-100 focus:text-green-700"
-                          onClick={() => onSuspend(org.id, org.status)}
+                          onClick={() => onStatusChange(org.id, "Active")}
                         >
                           <PlayCircle className="mr-2 h-4 w-4" />
                           Reactivate
@@ -444,11 +444,10 @@ export function OrganizationsClient({ data }: { data: Organization[] }) {
   const [isDialogOpen, setDialogOpen] = React.useState(false);
   const { toast } = useToast();
 
-  const handleSuspend = async (orgId: string, currentStatus: Organization['status']) => {
-    const newStatus = currentStatus === "Active" ? "Suspended" : "Active";
-    const result = await suspendOrganizationAction(orgId, newStatus);
+  const handleStatusChange = async (orgId: string, newStatus: Organization['status']) => {
+    const result = await setOrganizationStatusAction(orgId, newStatus);
     if (result.success) {
-      toast({ title: "Success", description: `Organization has been ${newStatus.toLowerCase()}.` });
+      toast({ title: "Success", description: result.message });
     } else {
       toast({ title: "Error", description: result.message, variant: "destructive" });
     }
@@ -475,13 +474,13 @@ export function OrganizationsClient({ data }: { data: Organization[] }) {
           <TabsTrigger value="arrears">In Arrears ({inArrearsOrgs.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="active" className="mt-4">
-          <OrganizationTable organizations={activeOrgs} onSuspend={handleSuspend} />
+          <OrganizationTable organizations={activeOrgs} onStatusChange={handleStatusChange} />
         </TabsContent>
         <TabsContent value="suspended" className="mt-4">
-           <OrganizationTable organizations={suspendedOrgs} onSuspend={handleSuspend} />
+           <OrganizationTable organizations={suspendedOrgs} onStatusChange={handleStatusChange} />
         </TabsContent>
         <TabsContent value="arrears" className="mt-4">
-            <OrganizationTable organizations={inArrearsOrgs} onSuspend={handleSuspend} />
+            <OrganizationTable organizations={inArrearsOrgs} onStatusChange={handleStatusChange} />
         </TabsContent>
       </Tabs>
 

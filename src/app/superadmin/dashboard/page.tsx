@@ -5,6 +5,7 @@ import { Building, Users, Database, AlertCircle, Sparkles } from "lucide-react";
 import { OrganizationsChart } from "./chart";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { generatePlatformSummary } from "@/ai/flows/generate-platform-summary";
+import { OrganizationsClient } from "./client";
 
 export default async function SuperadminDashboard() {
   const organizations = await getOrganizations();
@@ -62,9 +63,10 @@ export default async function SuperadminDashboard() {
         <Card className="lg:col-span-4">
             <CardHeader>
                 <CardTitle>User Distribution</CardTitle>
+                <CardDescription>Visual summary of user counts across all active institutions.</CardDescription>
             </CardHeader>
             <CardContent>
-                <OrganizationsChart data={organizations} />
+                <OrganizationsChart data={organizations.filter(o => o.status === 'Active')} />
             </CardContent>
         </Card>
         <Card className="lg:col-span-3">
@@ -86,6 +88,9 @@ export default async function SuperadminDashboard() {
                 </Alert>
             </CardContent>
         </Card>
+      </div>
+      <div className="mt-8">
+        <OrganizationsClient data={organizations} />
       </div>
     </>
   );
