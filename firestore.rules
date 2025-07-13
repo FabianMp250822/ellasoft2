@@ -5,17 +5,22 @@ service cloud.firestore {
   
     // HELPER FUNCTIONS
     
-    // Checks if the user is authenticated.
     function isSignedIn() {
       return request.auth != null;
     }
     
-    // Checks if the user has the 'superadmin' custom claim.
     function isSuperAdmin() {
       return isSignedIn() && request.auth.token.superadmin == true;
     }
     
+    // Checks if the user is requesting documents for their own organization.
+    // This is used for LIST queries where we don't have a single resource.
+    function isRequestingOwnOrgData() {
+      return isSignedIn() && request.auth.token.organizationId == request.query.resource.data.organizationId;
+    }
+
     // Checks if the user belongs to the organization that owns the resource.
+    // This is used for GET, UPDATE, DELETE on a single document.
     function isResourceOwner(resource) {
       return isSignedIn() && request.auth.token.organizationId == resource.data.organizationId;
     }
@@ -33,49 +38,58 @@ service cloud.firestore {
     // RULES FOR TENANT-SPECIFIC COLLECTIONS
     
     match /subjects/{docId} {
-      allow read, delete: if isResourceOwner(resource) || isSuperAdmin();
+      // Allow GET on a single doc if owner, or LIST if querying for own org.
+      allow read: if isResourceOwner(resource) || isRequestingOwnOrgData() || isSuperAdmin();
+      allow delete: if isResourceOwner(resource) || isSuperAdmin();
       allow create: if isCreatingForOwnOrg() || isSuperAdmin();
       allow update: if (isResourceOwner(resource) && isNotChangingOrgId()) || isSuperAdmin();
     }
     
     match /grades/{docId} {
-      allow read, delete: if isResourceOwner(resource) || isSuperAdmin();
+      allow read: if isResourceOwner(resource) || isRequestingOwnOrgData() || isSuperAdmin();
+      allow delete: if isResourceOwner(resource) || isSuperAdmin();
       allow create: if isCreatingForOwnOrg() || isSuperAdmin();
       allow update: if (isResourceOwner(resource) && isNotChangingOrgId()) || isSuperAdmin();
     }
     
     match /students/{docId} {
-      allow read, delete: if isResourceOwner(resource) || isSuperAdmin();
+      allow read: if isResourceOwner(resource) || isRequestingOwnOrgData() || isSuperAdmin();
+      allow delete: if isResourceOwner(resource) || isSuperAdmin();
       allow create: if isCreatingForOwnOrg() || isSuperAdmin();
       allow update: if (isResourceOwner(resource) && isNotChangingOrgId()) || isSuperAdmin();
     }
     
     match /teachers/{docId} {
-      allow read, delete: if isResourceOwner(resource) || isSuperAdmin();
+      allow read: if isResourceOwner(resource) || isRequestingOwnOrgData() || isSuperAdmin();
+      allow delete: if isResourceOwner(resource) || isSuperAdmin();
       allow create: if isCreatingForOwnOrg() || isSuperAdmin();
       allow update: if (isResourceOwner(resource) && isNotChangingOrgId()) || isSuperAdmin();
     }
 
     match /academicPeriods/{docId} {
-      allow read, delete: if isResourceOwner(resource) || isSuperAdmin();
+      allow read: if isResourceOwner(resource) || isRequestingOwnOrgData() || isSuperAdmin();
+      allow delete: if isResourceOwner(resource) || isSuperAdmin();
       allow create: if isCreatingForOwnOrg() || isSuperAdmin();
       allow update: if (isResourceOwner(resource) && isNotChangingOrgId()) || isSuperAdmin();
     }
 
     match /gradingSystems/{docId} {
-      allow read, delete: if isResourceOwner(resource) || isSuperAdmin();
+      allow read: if isResourceOwner(resource) || isRequestingOwnOrgData() || isSuperAdmin();
+      allow delete: if isResourceOwner(resource) || isSuperAdmin();
       allow create: if isCreatingForOwnOrg() || isSuperAdmin();
       allow update: if (isResourceOwner(resource) && isNotChangingOrgId()) || isSuperAdmin();
     }
 
     match /performanceIndicators/{docId} {
-      allow read, delete: if isResourceOwner(resource) || isSuperAdmin();
+      allow read: if isResourceOwner(resource) || isRequestingOwnOrgData() || isSuperAdmin();
+      allow delete: if isResourceOwner(resource) || isSuperAdmin();
       allow create: if isCreatingForOwnOrg() || isSuperAdmin();
       allow update: if (isResourceOwner(resource) && isNotChangingOrgId()) || isSuperAdmin();
     }
 
     match /academicLoads/{docId} {
-      allow read, delete: if isResourceOwner(resource) || isSuperAdmin();
+      allow read: if isResourceOwner(resource) || isRequestingOwnOrgData() || isSuperAdmin();
+      allow delete: if isResourceOwner(resource) || isSuperAdmin();
       allow create: if isCreatingForOwnOrg() || isSuperAdmin();
       allow update: if (isResourceOwner(resource) && isNotChangingOrgId()) || isSuperAdmin();
     }
@@ -84,11 +98,6 @@ service cloud.firestore {
     
     match /organizations/{orgId} {
       allow read, write: if isSuperAdmin();
-    }
-    
-    // Default deny all other access to collections not specified
-    match /{path=**}/documents/{document} {
-      allow read, write: if false;
     }
   }
 }
