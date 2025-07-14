@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 
 // This URL will be your deployed createOrganization function URL
-const CREATE_ORGANIZATION_URL = process.env.CREATE_ORGANIZATION_FUNCTION_URL || '';
+const CREATE_ORGANIZATION_URL = process.env.NEXT_PUBLIC_CREATE_ORGANIZATION_FUNCTION_URL || '';
 
 // This URL will be your deployed setOrganizationStatus function URL
-const SET_ORGANIZATION_STATUS_URL = process.env.SET_ORGANIZATION_STATUS_FUNCTION_URL || '';
+const SET_ORGANIZATION_STATUS_URL = process.env.NEXT_PUBLIC_SET_ORGANIZATION_STATUS_FUNCTION_URL || '';
 
 
 export async function createOrganizationAction(formData: FormData) {

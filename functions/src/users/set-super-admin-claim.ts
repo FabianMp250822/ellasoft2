@@ -5,6 +5,8 @@ import * as logger from "firebase-functions/logger";
 /**
  * Sets the 'superadmin' custom claim for a specific user.
  * This is intended to be run once to bootstrap the first superadmin.
+ * **Security:** In a production environment, this should be a callable function
+ * protected to be run only by an existing superadmin, or removed after first use.
  */
 export const setSuperAdminClaim = onRequest(async (request, response) => {
   // --- IMPORTANT ---
@@ -14,16 +16,17 @@ export const setSuperAdminClaim = onRequest(async (request, response) => {
 
   try {
     await admin.auth().setCustomUserClaims(uid, {superadmin: true});
-    logger.info(
-      `Successfully set superadmin claim for user: ${email} (UID: ${uid})`
-    );
-    response.status(200).send(
-      `Successfully set superadmin claim for user: ${email}`
-    );
+    const message = `Successfully set superadmin claim for user: ${email} (UID: ${uid})`;
+    logger.info(message);
+    response.status(200).send(message);
   } catch (error) {
-    logger.error(`Error setting superadmin claim for user: ${uid}`, error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    logger.error(
+      `Error setting superadmin claim for user: ${uid}`,
+      errorMessage
+    );
     response.status(500).send(
-      "Error setting superadmin claim. Check logs for details."
+      `Error setting superadmin claim. Check logs for details. Error: ${errorMessage}`
     );
   }
 });

@@ -449,7 +449,7 @@ export function OrganizationsClient({ data }: { data: Organization[] }) {
     if (result.success) {
       toast({ title: "Success", description: result.message });
     } else {
-      toast({ title: "Error", description: result.message, variant: "destructive" });
+      toast({ title: "Error", description: String(result.message), variant: "destructive" });
     }
   }
 

@@ -1,17 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-
-// In a real app, this would also be a cloud function
-const SUSPEND_ORGANIZATION_URL = 'https://us-central1-academia-facil-7e9a7.cloudfunctions.net/setOrganizationStatus';
+import { functions } from "@/lib/firebase";
+import { httpsCallable } from "firebase/functions";
 
 export async function createOrganizationAction(formData: FormData) {
   try {
-    // This function will now be called from the client component, so this action is a passthrough.
-    // The actual call will be made in organizations/client.tsx to a callable function.
-    // We keep this server action for potential future use or non-JS environments.
-    console.log("Create organization server action called. Note: primary logic is in client component.");
-
+    const createOrganizationFunction = httpsCallable(functions, 'createOrganization');
+    // Note: The 'httpsCallable' doesn't directly support FormData.
+    // The actual creation logic is handled in the client form using fetch to the HTTP function URL.
+    // This server action is kept for potential non-JS fallbacks or different form handling strategies.
+    console.log("Create organization server action called.");
+    
     revalidatePath("/superadmin/dashboard");
     revalidatePath("/superadmin/organizations");
     return { success: true, message: "Organization creation process initiated." };
@@ -20,16 +20,16 @@ export async function createOrganizationAction(formData: FormData) {
   }
 }
 
-
 export async function suspendOrganizationAction(orgId: string, status: 'Active' | 'Suspended') {
-    // This is a mock implementation. In a real app, this would be a secured Cloud Function.
-    console.log(`Setting organization ${orgId} to ${status}`);
+  try {
+    const setStatusFunction = httpsCallable(functions, 'setOrganizationStatus');
+    await setStatusFunction({ organizationId: orgId, status: status });
     
-    // Simulating API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-
     revalidatePath("/superadmin/dashboard");
     revalidatePath("/superadmin/organizations");
     
-    return { success: true };
+    return { success: true, message: `Organization status changed to ${status}` };
+  } catch(error: any) {
+    return { success: false, message: error.message || "An unknown error occurred." };
+  }
 }
