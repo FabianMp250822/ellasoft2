@@ -59,12 +59,11 @@ export const createOrganization = onCall(async (request) => {
         metadata: { contentType: "image/jpeg" }, // Adjust content type if needed
       });
       
-      const [url] = await fileUpload.getSignedUrl({
-          action: "read",
-          expires: "03-09-2491", // Far-future expiration date
-      });
+      // Make the file public
+      await fileUpload.makePublic();
 
-      return url;
+      // Return the public URL
+      return fileUpload.publicUrl();
     };
 
     const logoUrl = await uploadImage(data.logoBase64, "logos", `${data.orgName}-logo.jpg`);
@@ -86,6 +85,7 @@ export const createOrganization = onCall(async (request) => {
       userLimit: parseInt(data.userLimit, 10),
       logoUrl: logoUrl,
       adminId: adminUser.uid,
+      adminPhotoUrl: adminPhotoUrl,
       status: "Active",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       userCount: 1, // Starts with the admin user
