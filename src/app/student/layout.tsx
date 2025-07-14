@@ -41,8 +41,10 @@ export default function StudentLayout({
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && (!user || !claims?.student)) {
-      router.push('/');
+    if (!loading) {
+      if (!user || !claims?.student) {
+        router.push('/');
+      }
     }
   }, [user, claims, loading, router]);
 

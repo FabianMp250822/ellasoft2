@@ -61,8 +61,10 @@ export default function AdminLayout({
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && (!user || !claims?.admin)) {
-      router.push('/');
+    if (!loading) {
+      if (!user || !claims?.admin) {
+        router.push('/');
+      }
     }
   }, [user, claims, loading, router]);
 
