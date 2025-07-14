@@ -39,7 +39,7 @@ export const getPerformanceIndicatorsByOrg = onCall(async (request) => {
       id: doc.id,
       ...doc.data(),
     }));
-    
+
     logger.info(`Successfully fetched ${indicators.length} indicator sets for org ${organizationId}`);
 
     return indicators;

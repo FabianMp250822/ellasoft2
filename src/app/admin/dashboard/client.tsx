@@ -45,18 +45,18 @@ const setupStepsConfig = [
       href: "/admin/subjects",
     },
     {
-      key: "indicators",
-      title: "Performance Indicators (AI)",
-      description: "Generate learning indicators.",
-      icon: <ClipboardList className="h-6 w-6" />,
-      href: "/admin/performance-indicators",
-    },
-    {
       key: "teachers",
       title: "Teachers",
       description: "Register teaching staff.",
       icon: <BookUser className="h-6 w-6" />,
       href: "/admin/teachers",
+    },
+    {
+      key: "indicators",
+      title: "Performance Indicators (AI)",
+      description: "Generate learning indicators.",
+      icon: <ClipboardList className="h-6 w-6" />,
+      href: "/admin/performance-indicators",
     },
     {
       key: "students",

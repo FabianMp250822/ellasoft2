@@ -13,3 +13,4 @@ export {setOrganizationStatus} from "./organizations/set-status";
 export {createAcademicPeriod} from "./organizations/create-academic-period";
 export {savePerformanceIndicators} from "./organizations/save-performance-indicators";
 export {getPerformanceIndicatorsByOrg} from "./organizations/get-performance-indicators";
+export {createTeacher} from "./organizations/create-teacher";

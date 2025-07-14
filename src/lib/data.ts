@@ -87,6 +87,18 @@ export type PerformanceIndicator = {
     createdAt: any;
 };
 
+export type Teacher = {
+    uid: string;
+    organizationId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    photoUrl: string;
+    assignedSubjects: string[]; // Array of subject IDs
+    createdAt: any;
+};
+
 
 // Organizations
 export async function getOrganizations(): Promise<Organization[]> {
@@ -96,7 +108,6 @@ export async function getOrganizations(): Promise<Organization[]> {
     return result.data as Organization[];
   } catch (error) {
     console.error('Error fetching organizations via function:', error);
-    // Re-throw the error to be handled by the caller, e.g., React Query or a try/catch block in a component
     throw error;
   }
 }
@@ -118,20 +129,14 @@ export async function getAcademicPeriods(organizationId: string): Promise<Academ
     return periodsList;
 }
 
-export async function addAcademicPeriod(organizationId: string, period: Omit<AcademicPeriod, 'id' | 'organizationId'>) {
-    const periodsCol = collection(db, "academicPeriods");
-    const docRef = await addDoc(periodsCol, { organizationId, ...period });
-    return { id: docRef.id, organizationId, ...period };
+export async function deleteAcademicPeriod(id: string) {
+    const periodDoc = doc(db, "academicPeriods", id);
+    await deleteDoc(periodDoc);
 }
 
 export async function updateAcademicPeriod(id: string, period: Partial<Omit<AcademicPeriod, 'id' | 'organizationId'>>) {
     const periodDoc = doc(db, "academicPeriods", id);
     await updateDoc(periodDoc, period);
-}
-
-export async function deleteAcademicPeriod(id: string) {
-    const periodDoc = doc(db, "academicPeriods", id);
-    await deleteDoc(periodDoc);
 }
 
 
@@ -143,20 +148,14 @@ export async function getGradingSystems(organizationId: string): Promise<Grading
     return systemsSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as GradingSystem));
 }
 
-export async function addGradingSystem(organizationId: string, system: Omit<GradingSystem, 'id' | 'organizationId'>) {
-    const systemsCol = collection(db, "gradingSystems");
-    const docRef = await addDoc(systemsCol, { organizationId, ...system });
-    return { id: docRef.id, organizationId, ...system };
+export async function deleteGradingSystem(id: string) {
+    const systemDoc = doc(db, "gradingSystems", id);
+    await deleteDoc(systemDoc);
 }
 
 export async function updateGradingSystem(id: string, system: Partial<Omit<GradingSystem, 'id' | 'organizationId'>>) {
     const systemDoc = doc(db, "gradingSystems", id);
     await updateDoc(systemDoc, system);
-}
-
-export async function deleteGradingSystem(id: string) {
-    const systemDoc = doc(db, "gradingSystems", id);
-    await deleteDoc(systemDoc);
 }
 
 
@@ -168,20 +167,14 @@ export async function getGrades(organizationId: string): Promise<Grade[]> {
     return gradesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Grade));
 }
 
-export async function addGrade(organizationId: string, grade: Omit<Grade, 'id' | 'organizationId'>) {
-    const gradesCol = collection(db, "grades");
-    const docRef = await addDoc(gradesCol, { organizationId, ...grade });
-    return { id: docRef.id, organizationId, ...grade };
+export async function deleteGrade(id: string) {
+    const gradeDoc = doc(db, "grades", id);
+    await deleteDoc(gradeDoc);
 }
 
 export async function updateGrade(id: string, grade: Partial<Omit<Grade, 'id' | 'organizationId'>>) {
     const gradeDoc = doc(db, "grades", id);
     await updateDoc(gradeDoc, grade);
-}
-
-export async function deleteGrade(id: string) {
-    const gradeDoc = doc(db, "grades", id);
-    await deleteDoc(gradeDoc);
 }
 
 // Groups
@@ -192,29 +185,9 @@ export async function getGroups(organizationId: string): Promise<Group[]> {
     return groupsSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Group));
 }
 
-export async function addGroup(organizationId: string, group: Omit<Group, 'id' | 'organizationId'>) {
-    const groupsCol = collection(db, "groups");
-    const docRef = await addDoc(groupsCol, { organizationId, ...group });
-    return { id: docRef.id, organizationId, ...group };
-}
-
-// GradeWithGroup
-export async function getGradesWithGroups(organizationId: string): Promise<GradeWithGroup[]> {
-    const gradesWithGroupsCol = collection(db, "gradesWithGroups");
-    const q = query(gradesWithGroupsCol, where("organizationId", "==", organizationId));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as GradeWithGroup));
-}
-
-export async function addGradeWithGroup(organizationId: string, gradeWithGroup: Omit<GradeWithGroup, 'id' | 'organizationId'>) {
-    const gradesWithGroupsCol = collection(db, "gradesWithGroups");
-    const docRef = await addDoc(gradesWithGroupsCol, { organizationId, ...gradeWithGroup });
-    return { id: docRef.id, organizationId, ...gradeWithGroup };
-}
-
-export async function deleteGradeWithGroup(id: string) {
-    const docRef = doc(db, "gradesWithGroups", id);
-    await deleteDoc(docRef);
+export async function deleteGroup(id: string) {
+    const groupDoc = doc(db, "groups", id);
+    await deleteDoc(groupDoc);
 }
 
 
@@ -226,20 +199,14 @@ export async function getSubjects(organizationId: string): Promise<Subject[]> {
     return subjectsSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Subject));
 }
 
-export async function addSubject(organizationId: string, subject: Omit<Subject, 'id' | 'organizationId'>) {
-    const subjectsCol = collection(db, "subjects");
-    const docRef = await addDoc(subjectsCol, { organizationId, ...subject });
-    return { id: docRef.id, organizationId, ...subject };
+export async function deleteSubject(id: string) {
+    const subjectDoc = doc(db, "subjects", id);
+    await deleteDoc(subjectDoc);
 }
 
 export async function updateSubject(id: string, subject: Partial<Omit<Subject, 'id' | 'organizationId'>>) {
     const subjectDoc = doc(db, "subjects", id);
     await updateDoc(subjectDoc, subject);
-}
-
-export async function deleteSubject(id: string) {
-    const subjectDoc = doc(db, "subjects", id);
-    await deleteDoc(subjectDoc);
 }
 
 
@@ -248,7 +215,6 @@ export async function getPerformanceIndicatorsByOrg(organizationId: string): Pro
     try {
         const getIndicatorsFunction = httpsCallable(functions, 'getPerformanceIndicatorsByOrg');
         const result = await getIndicatorsFunction({ organizationId });
-        // Firestore timestamps need to be converted to Date objects
         const data = result.data as any[];
         return data.map(item => ({
             ...item,
@@ -258,6 +224,15 @@ export async function getPerformanceIndicatorsByOrg(organizationId: string): Pro
         console.error('Error fetching performance indicators via function:', error);
         throw error;
     }
+}
+
+
+// Teachers
+export async function getTeachers(organizationId: string): Promise<Teacher[]> {
+    const teachersCol = collection(db, "teachers");
+    const q = query(teachersCol, where("organizationId", "==", organizationId));
+    const teachersSnapshot = await getDocs(q);
+    return teachersSnapshot.docs.map(d => d.data() as Teacher);
 }
 
 
@@ -275,8 +250,8 @@ export async function getSetupStatus(organizationId: string) {
         gradingSystems,
         grades,
         subjects,
+        teachers,
         // indicators, // Assuming collections exist for these
-        // teachers,
         // students,
         // academicLoad
     ] = await Promise.all([
@@ -284,8 +259,8 @@ export async function getSetupStatus(organizationId: string) {
         checkCollection("gradingSystems", organizationId),
         checkCollection("grades", organizationId),
         checkCollection("subjects", organizationId),
+        checkCollection("teachers", organizationId),
         // checkCollection("performanceIndicators", organizationId),
-        // checkCollection("teachers", organizationId),
         // checkCollection("students", organizationId),
         // checkCollection("academicLoad", organizationId),
     ]);
@@ -296,7 +271,7 @@ export async function getSetupStatus(organizationId: string) {
       grades,
       subjects,
       indicators: false,
-      teachers: false,
+      teachers,
       students: false,
       academicLoad: false,
     };
