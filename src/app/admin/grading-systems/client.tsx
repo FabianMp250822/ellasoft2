@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -46,8 +47,10 @@ import { Textarea } from "@/components/ui/textarea";
 import type { GradingSystem } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
-import { getGradingSystems, addGradingSystem, updateGradingSystem, deleteGradingSystem } from "@/lib/data";
+import { getGradingSystems, updateGradingSystem, deleteGradingSystem } from "@/lib/data";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/lib/firebase";
 
 function GradingSystemForm({
   system,
@@ -72,7 +75,8 @@ function GradingSystemForm({
             await updateGradingSystem(system.id, { name, description, scale });
             toast({ title: "Success", description: "Grading system updated successfully." });
         } else {
-            await addGradingSystem(organizationId, { name, description, scale });
+            const createGradingSystemFn = httpsCallable(functions, 'createGradingSystem');
+            await createGradingSystemFn({ organizationId, name, description, scale });
             toast({ title: "Success", description: "Grading system created successfully." });
         }
         onClose();

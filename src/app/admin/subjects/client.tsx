@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -52,8 +53,10 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Subject, Grade } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
-import { getSubjects, addSubject, updateSubject, deleteSubject, getGrades } from "@/lib/data";
+import { getSubjects, updateSubject, deleteSubject, getGrades } from "@/lib/data";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/lib/firebase";
 
 function SubjectForm({
   subject,
@@ -84,7 +87,8 @@ function SubjectForm({
             await updateSubject(subject.id, { name, description, gradeId });
             toast({ title: "Success", description: "Subject updated successfully." });
         } else {
-            await addSubject(organizationId, { name, description, gradeId });
+            const createSubjectFn = httpsCallable(functions, 'createSubject');
+            await createSubjectFn({ organizationId, name, description, gradeId });
             toast({ title: "Success", description: "Subject created successfully." });
         }
         onClose();

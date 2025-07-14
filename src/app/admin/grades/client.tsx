@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -44,8 +45,10 @@ import { Input } from "@/components/ui/input";
 import type { Grade } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
-import { getGrades, addGrade, updateGrade, deleteGrade } from "@/lib/data";
+import { getGrades, updateGrade, deleteGrade } from "@/lib/data";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/lib/firebase";
 
 
 function GradeForm({
@@ -70,7 +73,8 @@ function GradeForm({
                 await updateGrade(grade.id, { name, groupName });
                 toast({ title: "Success", description: "Grade updated successfully." });
             } else {
-                await addGrade(organizationId, { name, groupName });
+                const createGradeFn = httpsCallable(functions, 'createGrade');
+                await createGradeFn({ organizationId, name, groupName });
                 toast({ title: "Success", description: "Grade created successfully." });
             }
             onClose();

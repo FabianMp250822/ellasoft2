@@ -4,11 +4,9 @@ import {
   query,
   where,
   getDocs,
-  addDoc,
   updateDoc,
   deleteDoc,
   doc,
-  getDoc,
   limit,
 } from "firebase/firestore";
 import { db, functions } from "./firebase";
@@ -48,22 +46,9 @@ export type GradingSystem = {
 export type Grade = {
     id: string;
     organizationId: string;
-    name: string; 
+    name: string; // e.g., "11th Grade"
+    groupName: string; // e.g., "A"
 };
-
-export type Group = {
-    id: string;
-    organizationId: string;
-    name: string;
-};
-
-export type GradeWithGroup = {
-    id: string;
-    organizationId: string;
-    gradeId: string;
-    groupId: string;
-};
-
 
 export type Subject = {
     id: string;
@@ -175,19 +160,6 @@ export async function deleteGrade(id: string) {
 export async function updateGrade(id: string, grade: Partial<Omit<Grade, 'id' | 'organizationId'>>) {
     const gradeDoc = doc(db, "grades", id);
     await updateDoc(gradeDoc, grade);
-}
-
-// Groups
-export async function getGroups(organizationId: string): Promise<Group[]> {
-    const groupsCol = collection(db, "groups");
-    const q = query(groupsCol, where("organizationId", "==", organizationId));
-    const groupsSnapshot = await getDocs(q);
-    return groupsSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Group));
-}
-
-export async function deleteGroup(id: string) {
-    const groupDoc = doc(db, "groups", id);
-    await deleteDoc(groupDoc);
 }
 
 
