@@ -28,7 +28,7 @@ interface AcademicLoadFormProps {
 }
 
 export function AcademicLoadForm({ organizationId, teachers, subjects, grades, periods, onSuccess, onCancel }: AcademicLoadFormProps) {
-  const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>();
+  const { control, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormValues>();
   const { toast } = useToast();
 
   const onSubmit = async (data: FormValues) => {
@@ -102,8 +102,8 @@ export function AcademicLoadForm({ organizationId, teachers, subjects, grades, p
                     if (selectedSubject && selectedSubject.gradeId) {
                         // This assumes one subject is tied to one grade, which is our current model.
                         // We set both subject and grade from this one selection.
-                        control.setValue('subjectId', selectedSubject.id);
-                        control.setValue('gradeId', selectedSubject.gradeId);
+                        setValue('subjectId', selectedSubject.id);
+                        setValue('gradeId', selectedSubject.gradeId);
                         field.onChange(value);
                     }
                 }} defaultValue={field.value}>

@@ -35,8 +35,8 @@ export const deleteAcademicLoad = onCall(async (request) => {
     const docData = doc.data();
     // 3. Security Check: Ensure the user belongs to the organization of the document.
     if (docData?.organizationId !== tokenOrgId) {
-        logger.warn(`User ${uid} attempted to delete load ${id} from org ${docData?.organizationId} but belongs to ${tokenOrgId}.`);
-        throw new HttpsError("permission-denied", "You can only delete assignments for your own organization.");
+      logger.warn(`User ${uid} attempted to delete load ${id} from org ${docData?.organizationId} but belongs to ${tokenOrgId}.`);
+      throw new HttpsError("permission-denied", "You can only delete assignments for your own organization.");
     }
 
     await docRef.delete();
@@ -47,7 +47,7 @@ export const deleteAcademicLoad = onCall(async (request) => {
     return {success: true, message: successMessage};
   } catch (error) {
     if (error instanceof HttpsError) {
-        throw error;
+      throw error;
     }
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     logger.error(`Error deleting academic load ${id}:`, error);
