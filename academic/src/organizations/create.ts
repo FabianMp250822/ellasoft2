@@ -2,127 +2,142 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import cors from "cors";
 import busboy from "busboy";
+import {v4 as uuidv4} from "uuid";
+import type {Request, Response} from "express";
 
 const corsHandler = cors({origin: true});
 
-export const createOrganization = functions.https.onRequest((req, res) => {
-  corsHandler(req, res, async () => {
+const storage = admin.storage();
+const db = admin.firestore();
+
+// 🔧 Extiende el tipo de Request para incluir rawBody
+interface RawBodyRequest extends Request {
+  rawBody: Buffer;
+}
+
+export const createOrganization = functions.https.onRequest(
+  async (req: RawBodyRequest, res: Response): Promise<void> => {
     if (req.method !== "POST") {
       res.status(405).send("Method Not Allowed");
       return;
     }
 
-    // TODO: Add authentication check for superadmin.
-    // const idToken = req.headers.authorization?.split("Bearer ")[1];
-    // if (!idToken) {
-    //   res.status(401).json({error: "Unauthorized: Missing token."});
-    //   return;
-    // }
-    // try {
-    //   const decodedToken = await admin.auth().verifyIdToken(idToken);
-    //   if (!decodedToken.superadmin) {
-    //     res.status(403)
-    //       .json({error: "Unauthorized: User is not a superadmin."});
-    //     return;
-    //   }
-    // } catch (error) {
-    //   res.status(401).json({error: "Unauthorized: Invalid token."});
-    //   return;
-    // }
+    corsHandler(req, res, () => {
+      const bb = busboy({headers: req.headers});
 
-    const bb = busboy({headers: req.headers});
+      const fields: Record<string, string> = {};
+      const files: Record<
+        string,
+        {buffer: Buffer; mimeType: string; fileName: string}
+      > = {};
 
-    const fields: {[key: string]: string} = {};
-    const fileUploads: {
-      [key: string]: {
-        promise: Promise<string>;
-        filename: string;
-        mimetype: string;
-      };
-    } = {};
+      bb.on(
+        "file",
+        (
+          fieldname: string,
+          file: NodeJS.ReadableStream,
+          info: busboy.FileInfo
+        ) => {
+          const {filename, mimeType} = info;
+          const chunks: Buffer[] = [];
+          file.on("data", (chunk: Buffer) => {
+            chunks.push(chunk);
+          });
+          file.on("end", () => {
+            files[fieldname] = {
+              buffer: Buffer.concat(chunks),
+              mimeType,
+              fileName: filename,
+            };
+          });
+        }
+      );
 
-    bb.on("field", (fieldname, val) => {
-      fields[fieldname] = val;
-    });
-
-    bb.on("file", (fieldname, file, info) => {
-      const {filename, mimeType} = info;
-      const bucket = admin.storage().bucket();
-      const filePath = `uploads/${Date.now()}_${filename}`;
-      const fileStream = bucket.file(filePath).createWriteStream({
-        metadata: {contentType: mimeType},
+      bb.on("field", (fieldname: string, val: string) => {
+        fields[fieldname] = val;
       });
 
-      file.pipe(fileStream);
+      bb.on("finish", async () => {
+        try {
+          // 1. Crear el usuario administrador
+          const adminUser = await admin.auth().createUser({
+            email: fields.adminEmail,
+            password: fields.adminPassword,
+            displayName: `${fields.adminFirstName} ${fields.adminLastName}`,
+          });
 
-      const promise = new Promise<string>((resolve, reject) => {
-        fileStream.on("error", reject);
-        fileStream.on("finish", () => {
-          const publicUrl =
-            `https://storage.googleapis.com/${bucket.name}/${filePath}`;
-          resolve(publicUrl);
-        });
+          // 2. Subir imágenes a Storage y obtener URLs
+          const uploadFile = async (
+            fileData: {buffer: Buffer; mimeType: string; fileName: string},
+            path: string
+          ): Promise<string> => {
+            if (!fileData) return "";
+            const bucket = storage.bucket();
+            const fileUpload = bucket.file(
+              `${path}/${uuidv4()}-${fileData.fileName}`
+            );
+            await fileUpload.save(fileData.buffer, {
+              metadata: {contentType: fileData.mimeType},
+            });
+            const [url] = await fileUpload.getSignedUrl({
+              action: "read",
+              expires: "03-09-2491",
+            });
+            return url;
+          };
+
+          const logoUrl = await uploadFile(files.orgLogo, "logos");
+          const adminPhotoUrl = await uploadFile(
+            files.adminPhoto,
+            "admin_photos"
+          );
+
+          await admin
+            .auth()
+            .updateUser(adminUser.uid, {photoURL: adminPhotoUrl});
+
+          // 3. Crear la organización en Firestore
+          const newOrganizationRef = db.collection("organizations").doc();
+          const newOrgData = {
+            name: fields.orgName,
+            address: fields.orgAddress,
+            phone: fields.orgPhone,
+            email: fields.orgEmail,
+            nit: fields.orgNit,
+            dane: fields.orgDane,
+            userLimit: parseInt(fields.userLimit, 10),
+            logoUrl: logoUrl,
+            adminId: adminUser.uid,
+            status: "Active",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            userCount: 1, // Se inicia con el administrador
+            dataConsumption: 0,
+          };
+          await newOrganizationRef.set(newOrgData);
+
+          // 4. Asignar custom claims al administrador
+          await admin
+            .auth()
+            .setCustomUserClaims(adminUser.uid, {
+              admin: true,
+              organizationId: newOrganizationRef.id,
+            });
+
+          res.status(201).send({
+            message: "Organization created successfully",
+            id: newOrganizationRef.id,
+          });
+        } catch (error) {
+          console.error("Error creating organization:", error);
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+          res.status(500).send({
+            details: `Error creating organization: ${errorMessage}`,
+          });
+        }
       });
-      fileUploads[fieldname] = {promise, filename, mimetype: mimeType};
+
+      bb.end(req.rawBody);
     });
-
-    bb.on("finish", async () => {
-      try {
-        const orgRef = admin.firestore().collection("organizations").doc();
-        const orgId = orgRef.id;
-
-        const adminUser = await admin.auth().createUser({
-          email: fields.adminEmail,
-          password: fields.adminPassword,
-          displayName: `${fields.adminFirstName} ${fields.adminLastName}`,
-        });
-
-        await admin.auth().setCustomUserClaims(adminUser.uid, {
-          admin: true,
-          organizationId: orgId,
-        });
-
-        const logoUrl = await fileUploads["orgLogo"].promise;
-        const adminPhotoUrl = await fileUploads["adminPhoto"].promise;
-
-        const organizationData = {
-          id: orgId,
-          name: fields.orgName,
-          address: fields.orgAddress,
-          phone: fields.orgPhone,
-          email: fields.orgEmail,
-          nit: fields.orgNit,
-          dane: fields.orgDane,
-          logoUrl,
-          userLimit: parseInt(fields.userLimit, 10) || 100,
-          userCount: 1, // Starts with the admin user
-          dataConsumption: 0,
-          adminId: adminUser.uid,
-          adminName: `${fields.adminFirstName} ${fields.adminLastName}`,
-          adminPhotoUrl,
-          createdAt: new Date().toISOString(),
-          status: "Active",
-        };
-
-        await orgRef.set(organizationData);
-
-        res.status(201).json({
-          message: "Organization created successfully.",
-          organizationId: orgId,
-        });
-      } catch (error) {
-        console.error("Error creating organization:", error);
-        const message =
-          error instanceof Error ?
-            error.message :
-            "An unknown error occurred.";
-        res.status(500).json({
-          error: "Failed to create organization.",
-          details: message,
-        });
-      }
-    });
-
-    bb.end(req.rawBody);
-  });
-});
+  }
+);
