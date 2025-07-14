@@ -24,7 +24,7 @@
     },
     {
       "source": "academic",
-      "codebase": "functions",
+      "codebase": "academic",
       "ignore": [
         "node_modules",
         ".git",
