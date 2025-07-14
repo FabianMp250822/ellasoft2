@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -44,8 +45,10 @@ export function SuperadminDashboardClient() {
   }, [user, toast]);
 
   React.useEffect(() => {
-    fetchOrgs();
-  }, [fetchOrgs]);
+    if(!authLoading && user) {
+        fetchOrgs();
+    }
+  }, [authLoading, user, fetchOrgs]);
   
   React.useEffect(() => {
     if (organizations.length > 0) {

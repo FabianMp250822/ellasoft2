@@ -19,10 +19,9 @@ export const getOrganizations = onCall(async (request) => {
 
     // Log for debugging
     logger.info(
-      `User ${request.auth.uid} (${request.auth.token.email}) has claims:`,
+      `User ${request.auth.uid} (${userRecord.email}) checking for superadmin claim.`,
       claims
     );
-    logger.info("Token claims:", request.auth.token);
 
     // Check if user is superadmin using the fresh claims
     if (!claims.superadmin) {
@@ -42,12 +41,15 @@ export const getOrganizations = onCall(async (request) => {
 
     logger.info(
       `Successfully fetched ${organizations.length} organizations for ` +
-      `superadmin: ${request.auth.token.email}`
+      `superadmin: ${userRecord.email}`
     );
 
     return organizations;
   } catch (error) {
     logger.error("Error fetching organizations:", error);
+    if (error instanceof HttpsError) {
+        throw error;
+    }
     throw new HttpsError("internal", "Error fetching organizations");
   }
 });

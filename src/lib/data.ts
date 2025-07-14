@@ -68,7 +68,9 @@ export async function getOrganizations(): Promise<Organization[]> {
   try {
     const getOrganizationsFunction = httpsCallable(functions, 'getOrganizations');
     const result = await getOrganizationsFunction();
-    return result.data as Organization[];
+    // The callable function returns an object with a `data` property.
+    const data = result.data as Organization[];
+    return data;
   } catch (error) {
     console.error('Error fetching organizations via function:', error);
     // Re-throw the error to be handled by the caller, e.g., React Query or a try/catch block in a component

@@ -2,38 +2,34 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
 
-    // Helper function to check if a user is a superadmin
     function isSuperAdmin() {
       return request.auth.token.superadmin == true;
     }
 
-    // Helper function to check if the user belongs to the specified organization
     function isOrganizationMember(orgId) {
       return request.auth.token.organizationId == orgId;
     }
-    
-    // Superadmins can read/write anything
-    match /{document=**} {
+
+    match /organizations/{orgId} {
       allow read, write: if isSuperAdmin();
     }
 
-    // Organizations can only be managed by superadmins
-    match /organizations/{orgId} {
-        allow read, write: if isSuperAdmin();
-    }
-    
-    // Rules for organization-specific collections
+    // Rules for collections associated with an organization
     match /academicPeriods/{docId} {
       allow read: if isOrganizationMember(resource.data.organizationId);
       allow write: if isOrganizationMember(request.resource.data.organizationId);
     }
-    
+
     match /gradingSystems/{docId} {
       allow read: if isOrganizationMember(resource.data.organizationId);
       allow write: if isOrganizationMember(request.resource.data.organizationId);
     }
-    
+
     match /grades/{docId} {
       allow read: if isOrganizationMember(resource.data.organizationId);
       allow write: if isOrganizationMember(request.resource.data.organizationId);
@@ -42,6 +38,11 @@ service cloud.firestore {
     match /subjects/{docId} {
       allow read: if isOrganizationMember(resource.data.organizationId);
       allow write: if isOrganizationMember(request.resource.data.organizationId);
+    }
+
+    // Default deny all other access
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
