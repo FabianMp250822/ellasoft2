@@ -30,13 +30,13 @@ export const getStudentsByGrade = onCall(async (request) => {
     const gradeDoc = await gradeRef.get();
 
     if (!gradeDoc.exists) {
-        throw new HttpsError("not-found", `Grade with ID ${gradeId} not found.`);
+      throw new HttpsError("not-found", `Grade with ID ${gradeId} not found.`);
     }
 
     const gradeData = gradeDoc.data();
     if (gradeData?.organizationId !== tokenOrgId) {
-        logger.warn(`User ${uid} from org ${tokenOrgId} attempted to access students from grade ${gradeId} which belongs to org ${gradeData?.organizationId}.`);
-        throw new HttpsError("permission-denied", "You can only query students from your own organization's grades.");
+      logger.warn(`User ${uid} from org ${tokenOrgId} attempted to access students from grade ${gradeId} which belongs to org ${gradeData?.organizationId}.`);
+      throw new HttpsError("permission-denied", "You can only query students from your own organization's grades.");
     }
 
     // 4. Fetch students
