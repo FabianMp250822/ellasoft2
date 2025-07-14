@@ -3,6 +3,20 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { addAcademicPeriod, deleteAcademicPeriod, updateAcademicPeriod } from "@/lib/data";
+import { getAuth } from "firebase-admin/auth";
+import { cookies } from "next/headers";
+
+async function getOrganizationId(): Promise<string> {
+    const sessionCookie = cookies().get("session")?.value || "";
+    if (!sessionCookie) {
+        throw new Error("User not authenticated");
+    }
+    const decodedClaims = await getAuth().verifySessionCookie(sessionCookie, true);
+    if (!decodedClaims.organizationId) {
+        throw new Error("Organization ID not found in claims");
+    }
+    return decodedClaims.organizationId;
+}
 
 const FormSchema = z.object({
   id: z.string(),
@@ -18,53 +32,62 @@ const FormSchema = z.object({
 const CreatePeriod = FormSchema.omit({ id: true });
 const UpdatePeriod = FormSchema;
 
-export async function createPeriodAction(formData: FormData) {
-  const validatedFields = CreatePeriod.safeParse({
-    name: formData.get("name"),
-    startDate: formData.get("startDate"),
-    endDate: formData.get("endDate"),
-  });
+export async function createPeriodAction(prevState: any, formData: FormData) {
+  try {
+    const orgId = await getOrganizationId();
+    const validatedFields = CreatePeriod.safeParse({
+        name: formData.get("name"),
+        startDate: formData.get("startDate"),
+        endDate: formData.get("endDate"),
+    });
 
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: "Validation failed. Could not create period.",
-    };
+    if (!validatedFields.success) {
+        return {
+        errors: validatedFields.error.flatten().fieldErrors,
+        message: "Validation failed. Could not create period.",
+        };
+    }
+
+    await addAcademicPeriod(orgId, {
+        ...validatedFields.data,
+        startDate: new Date(validatedFields.data.startDate),
+        endDate: new Date(validatedFields.data.endDate),
+    });
+
+    revalidatePath("/admin/periods");
+    return { message: "Period created successfully." };
+  } catch (e: any) {
+    return { message: e.message, errors: {} };
   }
-
-  await addAcademicPeriod('org_1', {
-    ...validatedFields.data,
-    startDate: new Date(validatedFields.data.startDate),
-    endDate: new Date(validatedFields.data.endDate),
-  });
-
-  revalidatePath("/admin/periods");
-  return { message: "Period created successfully." };
 }
 
-export async function updatePeriodAction(formData: FormData) {
-  const validatedFields = UpdatePeriod.safeParse({
-    id: formData.get("id"),
-    name: formData.get("name"),
-    startDate: formData.get("startDate"),
-    endDate: formData.get("endDate"),
-  });
+export async function updatePeriodAction(prevState: any, formData: FormData) {
+    try {
+        const validatedFields = UpdatePeriod.safeParse({
+            id: formData.get("id"),
+            name: formData.get("name"),
+            startDate: formData.get("startDate"),
+            endDate: formData.get("endDate"),
+        });
 
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: "Validation failed. Could not update period.",
-    };
-  }
-  
-  await updateAcademicPeriod(validatedFields.data.id, {
-      ...validatedFields.data,
-      startDate: new Date(validatedFields.data.startDate),
-      endDate: new Date(validatedFields.data.endDate),
-  });
+        if (!validatedFields.success) {
+            return {
+            errors: validatedFields.error.flatten().fieldErrors,
+            message: "Validation failed. Could not update period.",
+            };
+        }
+        
+        await updateAcademicPeriod(validatedFields.data.id, {
+            ...validatedFields.data,
+            startDate: new Date(validatedFields.data.startDate),
+            endDate: new Date(validatedFields.data.endDate),
+        });
 
-  revalidatePath("/admin/periods");
-  return { message: "Period updated successfully." };
+        revalidatePath("/admin/periods");
+        return { message: "Period updated successfully." };
+    } catch (e: any) {
+        return { message: e.message, errors: {} };
+    }
 }
 
 export async function deletePeriodAction(periodId: string) {

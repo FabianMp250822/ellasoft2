@@ -3,6 +3,20 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { addGradingSystem, deleteGradingSystem, updateGradingSystem } from "@/lib/data";
+import { getAuth } from "firebase-admin/auth";
+import { cookies } from "next/headers";
+
+async function getOrganizationId(): Promise<string> {
+    const sessionCookie = cookies().get("session")?.value || "";
+    if (!sessionCookie) {
+        throw new Error("User not authenticated");
+    }
+    const decodedClaims = await getAuth().verifySessionCookie(sessionCookie, true);
+    if (!decodedClaims.organizationId) {
+        throw new Error("Organization ID not found in claims");
+    }
+    return decodedClaims.organizationId;
+}
 
 const FormSchema = z.object({
   id: z.string(),
@@ -15,44 +29,53 @@ const CreateGradingSystem = FormSchema.omit({ id: true });
 const UpdateGradingSystem = FormSchema;
 
 
-export async function createGradingSystemAction(formData: FormData) {
-  const validatedFields = CreateGradingSystem.safeParse({
-    name: formData.get("name"),
-    description: formData.get("description"),
-    scale: formData.get("scale"),
-  });
+export async function createGradingSystemAction(prevState: any, formData: FormData) {
+  try {
+    const orgId = await getOrganizationId();
+    const validatedFields = CreateGradingSystem.safeParse({
+        name: formData.get("name"),
+        description: formData.get("description"),
+        scale: formData.get("scale"),
+    });
 
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: "Validation failed. Could not create grading system.",
-    };
+    if (!validatedFields.success) {
+        return {
+        errors: validatedFields.error.flatten().fieldErrors,
+        message: "Validation failed. Could not create grading system.",
+        };
+    }
+
+    await addGradingSystem(orgId, validatedFields.data);
+    revalidatePath("/admin/grading-systems");
+    return { message: "Grading system created successfully." };
+  } catch (e: any) {
+    return { message: e.message, errors: {} };
   }
-
-  await addGradingSystem('org_1', validatedFields.data);
-  revalidatePath("/admin/grading-systems");
-  return { message: "Grading system created successfully." };
 }
 
 
-export async function updateGradingSystemAction(formData: FormData) {
-  const validatedFields = UpdateGradingSystem.safeParse({
-    id: formData.get("id"),
-    name: formData.get("name"),
-    description: formData.get("description"),
-    scale: formData.get("scale"),
-  });
+export async function updateGradingSystemAction(prevState: any, formData: FormData) {
+    try {
+        const validatedFields = UpdateGradingSystem.safeParse({
+            id: formData.get("id"),
+            name: formData.get("name"),
+            description: formData.get("description"),
+            scale: formData.get("scale"),
+        });
 
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: "Validation failed. Could not update grading system.",
-    };
-  }
-  
-  await updateGradingSystem(validatedFields.data.id, validatedFields.data);
-  revalidatePath("/admin/grading-systems");
-  return { message: "Grading system updated successfully." };
+        if (!validatedFields.success) {
+            return {
+            errors: validatedFields.error.flatten().fieldErrors,
+            message: "Validation failed. Could not update grading system.",
+            };
+        }
+        
+        await updateGradingSystem(validatedFields.data.id, validatedFields.data);
+        revalidatePath("/admin/grading-systems");
+        return { message: "Grading system updated successfully." };
+    } catch (e: any) {
+        return { message: e.message, errors: {} };
+    }
 }
 
 export async function deleteGradingSystemAction(systemId: string) {

@@ -3,6 +3,20 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { addSubject, deleteSubject, updateSubject } from "@/lib/data";
+import { getAuth } from "firebase-admin/auth";
+import { cookies } from "next/headers";
+
+async function getOrganizationId(): Promise<string> {
+    const sessionCookie = cookies().get("session")?.value || "";
+    if (!sessionCookie) {
+        throw new Error("User not authenticated");
+    }
+    const decodedClaims = await getAuth().verifySessionCookie(sessionCookie, true);
+    if (!decodedClaims.organizationId) {
+        throw new Error("Organization ID not found in claims");
+    }
+    return decodedClaims.organizationId;
+}
 
 const FormSchema = z.object({
   id: z.string(),
@@ -13,41 +27,50 @@ const FormSchema = z.object({
 const CreateSubject = FormSchema.omit({ id: true });
 const UpdateSubject = FormSchema;
 
-export async function createSubjectAction(formData: FormData) {
-  const validatedFields = CreateSubject.safeParse({
-    name: formData.get("name"),
-    description: formData.get("description"),
-  });
+export async function createSubjectAction(prevState: any, formData: FormData) {
+  try {
+    const orgId = await getOrganizationId();
+    const validatedFields = CreateSubject.safeParse({
+        name: formData.get("name"),
+        description: formData.get("description"),
+    });
 
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: "Validation failed. Could not create subject.",
-    };
+    if (!validatedFields.success) {
+        return {
+        errors: validatedFields.error.flatten().fieldErrors,
+        message: "Validation failed. Could not create subject.",
+        };
+    }
+    
+    await addSubject(orgId, validatedFields.data);
+    revalidatePath("/admin/subjects");
+    return { message: "Subject created successfully." };
+  } catch (e: any) {
+    return { message: e.message, errors: {} };
   }
-  
-  await addSubject('org_1', validatedFields.data);
-  revalidatePath("/admin/subjects");
-  return { message: "Subject created successfully." };
 }
 
-export async function updateSubjectAction(formData: FormData) {
-  const validatedFields = UpdateSubject.safeParse({
-    id: formData.get("id"),
-    name: formData.get("name"),
-    description: formData.get("description"),
-  });
+export async function updateSubjectAction(prevState: any, formData: FormData) {
+  try {
+    const validatedFields = UpdateSubject.safeParse({
+        id: formData.get("id"),
+        name: formData.get("name"),
+        description: formData.get("description"),
+    });
 
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: "Validation failed. Could not update subject.",
-    };
+    if (!validatedFields.success) {
+        return {
+        errors: validatedFields.error.flatten().fieldErrors,
+        message: "Validation failed. Could not update subject.",
+        };
+    }
+
+    await updateSubject(validatedFields.data.id, validatedFields.data);
+    revalidatePath("/admin/subjects");
+    return { message: "Subject updated successfully." };
+  } catch (e: any) {
+    return { message: e.message, errors: {} };
   }
-
-  await updateSubject(validatedFields.data.id, validatedFields.data);
-  revalidatePath("/admin/subjects");
-  return { message: "Subject updated successfully." };
 }
 
 export async function deleteSubjectAction(subjectId: string) {
