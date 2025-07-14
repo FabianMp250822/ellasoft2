@@ -50,29 +50,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 
 export type FormValues = {
-  orgName: string;
-  orgAddress: string;
-  orgPhone: string;
-  orgEmail:string;
-  orgNit: string;
-  orgDane: string;
-  orgLogo: FileList;
+  name: string;
+  address: string;
+  phone: string;
+  email:string;
+  nit: string;
+  dane: string;
   userLimit: number;
-  adminFirstName: string;
-  adminLastName: string;
-  adminPhone: string;
-  adminEmail: string;
-  adminPassword: string;
-  adminPhoto: FileList;
 };
-
-// Helper to convert a file to a Base64 string
-const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = error => reject(error);
-});
 
 
 function CreateOrganizationForm({ onClose }: { onClose: () => void }) {
@@ -84,39 +69,22 @@ function CreateOrganizationForm({ onClose }: { onClose: () => void }) {
   const { toast } = useToast();
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
+    // Note: Admin user creation and image uploads are simplified/omitted
+    // in this client-only approach. A real app would need a callable function
+    // for secure user creation and signed URLs for uploads.
     
-    if (!data.orgLogo?.[0] || !data.adminPhoto?.[0]) {
-        toast({ title: "Error", description: "Logo and admin photo are required.", variant: "destructive" });
-        return;
-    }
+    const result = await createOrganizationAction({
+        ...data,
+        userLimit: Number(data.userLimit) // Ensure it's a number
+    });
 
-    try {
-        const logoBase64 = await toBase64(data.orgLogo[0]);
-        const adminPhotoBase64 = await toBase64(data.adminPhoto[0]);
-        
-        // Remove file objects before sending to server action
-        const { orgLogo, adminPhoto, ...restData } = data;
-
-        const result = await createOrganizationAction({
-            ...restData,
-            logoBase64,
-            adminPhotoBase64
-        });
-
-        if (result.success) {
-            toast({ title: "Success", description: result.message });
-            onClose();
-        } else {
-            toast({
-                title: "Error",
-                description: result.message,
-                variant: "destructive",
-            });
-        }
-    } catch(error) {
-         toast({
-            title: "File Error",
-            description: "Could not process image files. Please try again.",
+    if (result.success) {
+        toast({ title: "Success", description: result.message });
+        onClose();
+    } else {
+        toast({
+            title: "Error",
+            description: result.message,
             variant: "destructive",
         });
     }
@@ -132,14 +100,14 @@ function CreateOrganizationForm({ onClose }: { onClose: () => void }) {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="orgName">Organization Name</Label>
+                <Label htmlFor="name">Organization Name</Label>
                 <Input
-                  id="orgName"
-                  {...register("orgName", { required: "Name is required" })}
+                  id="name"
+                  {...register("name", { required: "Name is required" })}
                 />
-                {errors.orgName && (
+                {errors.name && (
                   <p className="text-destructive text-sm">
-                    {errors.orgName.message}
+                    {errors.name.message}
                   </p>
                 )}
               </div>
@@ -157,183 +125,68 @@ function CreateOrganizationForm({ onClose }: { onClose: () => void }) {
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="orgAddress">Address</Label>
+                <Label htmlFor="address">Address</Label>
                 <Input
-                  id="orgAddress"
-                  {...register("orgAddress", {
+                  id="address"
+                  {...register("address", {
                     required: "Address is required",
                   })}
                 />
-                {errors.orgAddress && (
+                {errors.address && (
                   <p className="text-destructive text-sm">
-                    {errors.orgAddress.message}
+                    {errors.address.message}
                   </p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="orgPhone">Phone</Label>
+                <Label htmlFor="phone">Phone</Label>
                 <Input
-                  id="orgPhone"
+                  id="phone"
                   type="tel"
-                  {...register("orgPhone", { required: "Phone is required" })}
+                  {...register("phone", { required: "Phone is required" })}
                 />
-                {errors.orgPhone && (
+                {errors.phone && (
                   <p className="text-destructive text-sm">
-                    {errors.orgPhone.message}
+                    {errors.phone.message}
                   </p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="orgEmail">Email</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="orgEmail"
+                  id="email"
                   type="email"
-                  {...register("orgEmail", { required: "Email is required" })}
+                  {...register("email", { required: "Email is required" })}
                 />
-                {errors.orgEmail && (
+                {errors.email && (
                   <p className="text-destructive text-sm">
-                    {errors.orgEmail.message}
+                    {errors.email.message}
                   </p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="orgNit">NIT</Label>
+                <Label htmlFor="nit">NIT</Label>
                 <Input
-                  id="orgNit"
-                  {...register("orgNit", { required: "NIT is required" })}
+                  id="nit"
+                  {...register("nit", { required: "NIT is required" })}
                 />
-                {errors.orgNit && (
+                {errors.nit && (
                   <p className="text-destructive text-sm">
-                    {errors.orgNit.message}
+                    {errors.nit.message}
                   </p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="orgDane">DANE</Label>
+                <Label htmlFor="dane">DANE</Label>
                 <Input
-                  id="orgDane"
-                  {...register("orgDane", {
+                  id="dane"
+                  {...register("dane", {
                     required: "DANE code is required",
                   })}
                 />
-                {errors.orgDane && (
+                {errors.dane && (
                   <p className="text-destructive text-sm">
-                    {errors.orgDane.message}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2 col-span-full">
-                <Label htmlFor="orgLogo">Organization Logo</Label>
-                <Input
-                  id="orgLogo"
-                  type="file"
-                  accept="image/*"
-                  {...register("orgLogo", { required: "Logo is required" })}
-                />
-                {errors.orgLogo && (
-                  <p className="text-destructive text-sm">
-                    {errors.orgLogo.message}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4 pt-4 border-t">
-            <h3 className="text-lg font-medium text-foreground">
-              Administrator Details
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="adminFirstName">First Name</Label>
-                <Input
-                  id="adminFirstName"
-                  {...register("adminFirstName", {
-                    required: "First name is required",
-                  })}
-                />
-                {errors.adminFirstName && (
-                  <p className="text-destructive text-sm">
-                    {errors.adminFirstName.message}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="adminLastName">Last Name</Label>
-                <Input
-                  id="adminLastName"
-                  {...register("adminLastName", {
-                    required: "Last name is required",
-                  })}
-                />
-                {errors.adminLastName && (
-                  <p className="text-destructive text-sm">
-                    {errors.adminLastName.message}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="adminPhone">Phone</Label>
-                <Input
-                  id="adminPhone"
-                  type="tel"
-                  {...register("adminPhone", {
-                    required: "Admin phone is required",
-                  })}
-                />
-                {errors.adminPhone && (
-                  <p className="text-destructive text-sm">
-                    {errors.adminPhone.message}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="adminEmail">Admin Email</Label>
-                <Input
-                  id="adminEmail"
-                  type="email"
-                  {...register("adminEmail", {
-                    required: "Admin email is required",
-                  })}
-                />
-                {errors.adminEmail && (
-                  <p className="text-destructive text-sm">
-                    {errors.adminEmail.message}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="adminPassword">Password</Label>
-                <Input
-                  id="adminPassword"
-                  type="password"
-                  {...register("adminPassword", {
-                    required: "Password is required",
-                    minLength: {
-                      value: 6,
-                      message: "Password must be at least 6 characters",
-                    },
-                  })}
-                />
-                {errors.adminPassword && (
-                  <p className="text-destructive text-sm">
-                    {errors.adminPassword.message}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="adminPhoto">Admin Photo</Label>
-                <Input
-                  id="adminPhoto"
-                  type="file"
-                  accept="image/*"
-                  {...register("adminPhoto", {
-                    required: "Admin photo is required",
-                  })}
-                />
-                {errors.adminPhoto && (
-                  <p className="text-destructive text-sm">
-                    {errors.adminPhoto.message}
+                    {errors.dane.message}
                   </p>
                 )}
               </div>
@@ -508,12 +361,12 @@ export function OrganizationsClient({ data }: { data: Organization[] }) {
 
 
       <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Create New Organization</DialogTitle>
             <DialogDescription>
               Fill out the form below to register a new institution on the
-              platform.
+              platform. Note: Admin creation and image uploads are handled separately.
             </DialogDescription>
           </DialogHeader>
           <CreateOrganizationForm onClose={() => setDialogOpen(false)} />

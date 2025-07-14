@@ -4,8 +4,3 @@ admin.initializeApp();
 
 // Auth functions
 export {setSuperAdminClaim} from "./users/set-super-admin-claim";
-
-// Organization functions
-export {createOrganization} from "./organizations/create";
-export {getOrganizations} from "./organizations/get";
-export {setOrganizationStatus} from "./organizations/set-status";

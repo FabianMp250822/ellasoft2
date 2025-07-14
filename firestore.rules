@@ -27,65 +27,49 @@ service cloud.firestore {
 
     // TENANT-SPECIFIC COLLECTIONS
     match /subjects/{docId} {
-      allow read: if (isSignedIn() && get(/databases/$(database)/documents/subjects/$(docId)).data.organizationId == request.auth.token.organizationId)
-                    || isSuperAdmin();
-      allow list: if isSuperAdmin() || (isSignedIn() && resource.data.organizationId == request.auth.token.organizationId);
+      allow read, list: if isSuperAdmin() || (isSignedIn() && resource.data.organizationId == request.auth.token.organizationId);
       allow create: if isCreatingForOwnOrg() || isSuperAdmin();
       allow update, delete: if isResourceOwner(resource) || isSuperAdmin();
     }
 
     match /grades/{docId} {
-      allow read: if (isSignedIn() && get(/databases/$(database)/documents/grades/$(docId)).data.organizationId == request.auth.token.organizationId)
-                    || isSuperAdmin();
-      allow list: if isSuperAdmin() || (isSignedIn() && resource.data.organizationId == request.auth.token.organizationId);
+      allow read, list: if isSuperAdmin() || (isSignedIn() && resource.data.organizationId == request.auth.token.organizationId);
       allow create: if isCreatingForOwnOrg() || isSuperAdmin();
       allow update, delete: if isResourceOwner(resource) || isSuperAdmin();
     }
 
     match /students/{docId} {
-      allow read: if (isSignedIn() && get(/databases/$(database)/documents/students/$(docId)).data.organizationId == request.auth.token.organizationId)
-                    || isSuperAdmin();
-      allow list: if isSuperAdmin() || (isSignedIn() && resource.data.organizationId == request.auth.token.organizationId);
+      allow read, list: if isSuperAdmin() || (isSignedIn() && resource.data.organizationId == request.auth.token.organizationId);
       allow create: if isCreatingForOwnOrg() || isSuperAdmin();
       allow update, delete: if isResourceOwner(resource) || isSuperAdmin();
     }
 
     match /teachers/{docId} {
-      allow read: if (isSignedIn() && get(/databases/$(database)/documents/teachers/$(docId)).data.organizationId == request.auth.token.organizationId)
-                    || isSuperAdmin();
-      allow list: if isSuperAdmin() || (isSignedIn() && resource.data.organizationId == request.auth.token.organizationId);
+      allow read, list: if isSuperAdmin() || (isSignedIn() && resource.data.organizationId == request.auth.token.organizationId);
       allow create: if isCreatingForOwnOrg() || isSuperAdmin();
       allow update, delete: if isResourceOwner(resource) || isSuperAdmin();
     }
 
     match /academicPeriods/{docId} {
-      allow read: if (isSignedIn() && get(/databases/$(database)/documents/academicPeriods/$(docId)).data.organizationId == request.auth.token.organizationId)
-                    || isSuperAdmin();
-      allow list: if isSuperAdmin() || (isSignedIn() && resource.data.organizationId == request.auth.token.organizationId);
+      allow read, list: if isSuperAdmin() || (isSignedIn() && resource.data.organizationId == request.auth.token.organizationId);
       allow create: if isCreatingForOwnOrg() || isSuperAdmin();
       allow update, delete: if isResourceOwner(resource) || isSuperAdmin();
     }
 
     match /gradingSystems/{docId} {
-      allow read: if (isSignedIn() && get(/databases/$(database)/documents/gradingSystems/$(docId)).data.organizationId == request.auth.token.organizationId)
-                    || isSuperAdmin();
-      allow list: if isSuperAdmin() || (isSignedIn() && resource.data.organizationId == request.auth.token.organizationId);
+      allow read, list: if isSuperAdmin() || (isSignedIn() && resource.data.organizationId == request.auth.token.organizationId);
       allow create: if isCreatingForOwnOrg() || isSuperAdmin();
       allow update, delete: if isResourceOwner(resource) || isSuperAdmin();
     }
 
     match /performanceIndicators/{docId} {
-      allow read: if (isSignedIn() && get(/databases/$(database)/documents/performanceIndicators/$(docId)).data.organizationId == request.auth.token.organizationId)
-                    || isSuperAdmin();
-      allow list: if isSuperAdmin() || (isSignedIn() && resource.data.organizationId == request.auth.token.organizationId);
+      allow read, list: if isSuperAdmin() || (isSignedIn() && resource.data.organizationId == request.auth.token.organizationId);
       allow create: if isCreatingForOwnOrg() || isSuperAdmin();
       allow update, delete: if isResourceOwner(resource) || isSuperAdmin();
     }
 
     match /academicLoads/{docId} {
-      allow read: if (isSignedIn() && get(/databases/$(database)/documents/academicLoads/$(docId)).data.organizationId == request.auth.token.organizationId)
-                    || isSuperAdmin();
-      allow list: if isSuperAdmin() || (isSignedIn() && resource.data.organizationId == request.auth.token.organizationId);
+      allow read, list: if isSuperAdmin() || (isSignedIn() && resource.data.organizationId == request.auth.token.organizationId);
       allow create: if isCreatingForOwnOrg() || isSuperAdmin();
       allow update, delete: if isResourceOwner(resource) || isSuperAdmin();
     }
@@ -93,8 +77,8 @@ service cloud.firestore {
     // SUPERADMIN-ONLY COLLECTIONS
 
     match /organizations/{orgId} {
-      allow read, list: if isSignedIn();
-      allow write: if isSuperAdmin();
+      // Superadmins can read, create, and update any organization document.
+      allow read, write: if isSuperAdmin();
     }
 
     match /users/{userId} {
