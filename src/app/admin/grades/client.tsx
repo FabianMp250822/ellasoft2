@@ -71,11 +71,12 @@ function GradeForm({
         e.preventDefault();
         setSubmitting(true);
         try {
+            const data = { name, groupName };
             if (grade) {
-                await manageGradesFn({ action: 'update', gradeId: grade.id, organizationId, data: { name, groupName } });
+                await manageGradesFn({ action: 'update', gradeId: grade.id, organizationId, data });
                 toast({ title: "Success", description: "Grade updated successfully." });
             } else {
-                await manageGradesFn({ action: 'create', organizationId, data: { name, groupName } });
+                await manageGradesFn({ action: 'create', organizationId, data });
                 toast({ title: "Success", description: "Grade created successfully." });
             }
             onClose();
