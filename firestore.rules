@@ -1,84 +1,67 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper Functions
+
     function isSuperAdmin() {
       return request.auth.token.superadmin == true;
     }
-    
+
     function isOrganizationMember(orgId) {
-      return request.auth.token.organizationId == orgId;
-    }
-    
-    function isOrganizationAdmin(orgId) {
-      return isOrganizationMember(orgId) && request.auth.token.admin == true;
+      return request.auth != null && request.auth.token.organizationId == orgId;
     }
 
-    // Organizations
+    function isAdmin(orgId) {
+        return isOrganizationMember(orgId) && request.auth.token.admin == true;
+    }
+
     match /organizations/{orgId} {
-      // Superadmins can read/write everything.
-      // Admins can read their own organization's document.
-      allow read: if isSuperAdmin() || isOrganizationAdmin(orgId);
-      allow write: if isSuperAdmin(); // All writes are handled by Cloud Functions for superadmins
+      allow read: if isSuperAdmin() || isAdmin(orgId);
+      allow write: if isSuperAdmin(); // Only superadmins can create/update orgs directly
     }
-    
-    // Academic Periods
+
     match /academicPeriods/{periodId} {
-      // Members can read periods from their own org.
-      // Writes are handled by Cloud Functions for security.
       allow read: if isOrganizationMember(resource.data.organizationId);
-      allow write: if isOrganizationAdmin(request.resource.data.organizationId);
+      allow create: if isAdmin(request.resource.data.organizationId);
+      allow update, delete: if isAdmin(resource.data.organizationId);
     }
     
-    // Grading Systems
     match /gradingSystems/{systemId} {
       allow read: if isOrganizationMember(resource.data.organizationId);
-      allow write: if isOrganizationAdmin(request.resource.data.organizationId);
+      allow create: if isAdmin(request.resource.data.organizationId);
+      allow update, delete: if isAdmin(resource.data.organizationId);
     }
 
-    // Grades
     match /grades/{gradeId} {
       allow read: if isOrganizationMember(resource.data.organizationId);
-      allow write: if isOrganizationAdmin(request.resource.data.organizationId);
+      allow create: if isAdmin(request.resource.data.organizationId);
+      allow update, delete: if isAdmin(resource.data.organizationId);
     }
 
-    // Subjects
     match /subjects/{subjectId} {
       allow read: if isOrganizationMember(resource.data.organizationId);
-      allow write: if isOrganizationAdmin(request.resource.data.organizationId);
+      allow create: if isAdmin(request.resource.data.organizationId);
+      allow update, delete: if isAdmin(resource.data.organizationId);
     }
 
-    // Performance Indicators
-    match /performanceIndicators/{indicatorId} {
-        // Reads are allowed by any member of the organization
-        allow read: if isOrganizationMember(resource.data.organizationId);
-        // Writes are ONLY allowed via the secure Cloud Function
-        allow write: if false; 
-    }
-
-    // Teachers
     match /teachers/{teacherId} {
-        allow read: if isOrganizationMember(resource.data.organizationId);
-        // Writes are handled by Cloud Function
-        allow write: if false;
+      allow read: if isOrganizationMember(resource.data.organizationId);
+      // Write is handled by Cloud Function
     }
-
-    // Students
+    
     match /students/{studentId} {
-        allow read: if isOrganizationMember(resource.data.organizationId);
-        // Writes are handled by Cloud Function
-        allow write: if false;
+      allow read: if isOrganizationMember(resource.data.organizationId);
+       // Write is handled by Cloud Function
     }
 
-    // Academic Loads
     match /academicLoads/{loadId} {
-        allow read: if isOrganizationMember(resource.data.organizationId);
-        // Writes are handled by Cloud Function
-        allow write: if false;
-        // Deletes are also handled by a secure Cloud Function
-        allow delete: if false;
+       allow read, write: if isOrganizationMember(request.resource.data.organizationId);
+    }
+
+    match /performanceIndicators/{docId} {
+      allow read: if isOrganizationMember(resource.data.organizationId);
+      // Write is handled exclusively by the savePerformanceIndicators Cloud Function
     }
   }
 }
