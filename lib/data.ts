@@ -22,7 +22,7 @@ export type Organization = {
     adminPhotoUrl: string;
     email: string; // organization's email
     status: "Active" | "Suspended" | "In Arrears";
-    createdAt: string;
+    createdAt: any; // Can be a server timestamp
     logoUrl?: string;
     userLimit: number;
     userCount: number;
@@ -68,7 +68,8 @@ export async function getOrganizations(): Promise<Organization[]> {
     return result.data as Organization[];
   } catch (error) {
     console.error('Error fetching organizations via function:', error);
-    return [];
+    // Re-throw the error to be handled by the caller, e.g., React Query or a try/catch block in a component
+    throw error;
   }
 }
 

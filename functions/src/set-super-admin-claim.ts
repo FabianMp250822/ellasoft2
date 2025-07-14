@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import {onRequest} from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
@@ -6,6 +7,7 @@ import * as logger from "firebase-functions/logger";
  * Sets the 'superadmin' custom claim for a specific user.
  * This is intended to be run once to bootstrap the first superadmin.
  */
+
 export const setSuperAdminClaim = onRequest(async (request, response) => {
   // --- IMPORTANT ---
   // The UID of the user to be made a superadmin.

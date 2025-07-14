@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 

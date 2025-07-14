@@ -49,7 +49,7 @@ import { createOrganizationAction, setOrganizationStatusAction } from "./actions
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 
-type FormValues = {
+export type FormValues = {
   orgName: string;
   orgAddress: string;
   orgPhone: string;
@@ -66,6 +66,15 @@ type FormValues = {
   adminPhoto: FileList;
 };
 
+// Helper to convert a file to a Base64 string
+const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+});
+
+
 function CreateOrganizationForm({ onClose }: { onClose: () => void }) {
   const {
     register,
@@ -75,28 +84,41 @@ function CreateOrganizationForm({ onClose }: { onClose: () => void }) {
   const { toast } = useToast();
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
-    const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
-      if (key === "orgLogo" || key === "adminPhoto") {
-        if (value instanceof FileList && value.length > 0) {
-          formData.append(key, value[0]);
+    
+    if (!data.orgLogo?.[0] || !data.adminPhoto?.[0]) {
+        toast({ title: "Error", description: "Logo and admin photo are required.", variant: "destructive" });
+        return;
+    }
+
+    try {
+        const logoBase64 = await toBase64(data.orgLogo[0]);
+        const adminPhotoBase64 = await toBase64(data.adminPhoto[0]);
+        
+        // Remove file objects before sending to server action
+        const { orgLogo, adminPhoto, ...restData } = data;
+
+        const result = await createOrganizationAction({
+            ...restData,
+            logoBase64,
+            adminPhotoBase64
+        });
+
+        if (result.success) {
+            toast({ title: "Success", description: result.message });
+            onClose();
+        } else {
+            toast({
+                title: "Error",
+                description: result.message,
+                variant: "destructive",
+            });
         }
-      } else {
-        formData.append(key, String(value));
-      }
-    });
-
-    const result = await createOrganizationAction(formData);
-
-    if (result.success) {
-      toast({ title: "Success", description: result.message });
-      onClose();
-    } else {
-      toast({
-        title: "Error",
-        description: result.message,
-        variant: "destructive",
-      });
+    } catch(error) {
+         toast({
+            title: "File Error",
+            description: "Could not process image files. Please try again.",
+            variant: "destructive",
+        });
     }
   };
 

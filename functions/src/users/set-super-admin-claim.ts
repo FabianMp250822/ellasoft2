@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import {onRequest} from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
