@@ -5,34 +5,41 @@ import busboy from "busboy";
 
 const corsHandler = cors({origin: true});
 
-export const createOrganization = functions.https.onRequest(async (req, res) => {
+export const createOrganization = functions.https.onRequest((req, res) => {
   corsHandler(req, res, async () => {
     if (req.method !== "POST") {
       res.status(405).send("Method Not Allowed");
       return;
     }
 
-    // TODO: Add authentication check to ensure only superadmins can call this.
+    // TODO: Add authentication check for superadmin.
     // const idToken = req.headers.authorization?.split("Bearer ")[1];
+    // if (!idToken) {
+    //   res.status(401).json({error: "Unauthorized: Missing token."});
+    //   return;
+    // }
     // try {
     //   const decodedToken = await admin.auth().verifyIdToken(idToken);
     //   if (!decodedToken.superadmin) {
-    //     res.status(403).json({ error: "Unauthorized: User is not a superadmin." });
+    //     res.status(403)
+    //       .json({error: "Unauthorized: User is not a superadmin."});
     //     return;
     //   }
     // } catch (error) {
-    //   res.status(401).json({ error: "Unauthorized: Invalid token." });
+    //   res.status(401).json({error: "Unauthorized: Invalid token."});
     //   return;
     // }
 
     const bb = busboy({headers: req.headers});
 
     const fields: {[key: string]: string} = {};
-    const fileUploads: {[key: string]: {
-        promise: Promise<string>,
-        filename: string,
-        mimetype: string,
-    }} = {};
+    const fileUploads: {
+        [key: string]: {
+            promise: Promise<string>,
+            filename: string,
+            mimetype: string,
+        }
+    } = {};
 
     bb.on("field", (fieldname, val) => {
       fields[fieldname] = val;
@@ -51,7 +58,8 @@ export const createOrganization = functions.https.onRequest(async (req, res) => 
       const promise = new Promise<string>((resolve, reject) => {
         fileStream.on("error", reject);
         fileStream.on("finish", () => {
-          const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+          const publicUrl =
+            `https://storage.googleapis.com/${bucket.name}/${filePath}`;
           resolve(publicUrl);
         });
       });
@@ -86,7 +94,7 @@ export const createOrganization = functions.https.onRequest(async (req, res) => 
           nit: fields.orgNit,
           dane: fields.orgDane,
           logoUrl,
-          userLimit: parseInt(fields.userLimit, 10) || 100, // Default to 100 if not provided
+          userLimit: parseInt(fields.userLimit, 10) || 100,
           userCount: 1, // Starts with the admin user
           dataConsumption: 0,
           adminId: adminUser.uid,
@@ -102,9 +110,16 @@ export const createOrganization = functions.https.onRequest(async (req, res) => 
           message: "Organization created successfully.",
           organizationId: orgId,
         });
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error creating organization:", error);
-        res.status(500).json({error: "Failed to create organization.", details: error.message});
+        const message =
+          error instanceof Error ?
+          error.message :
+          "An unknown error occurred.";
+        res.status(500).json({
+          error: "Failed to create organization.",
+          details: message,
+        });
       }
     });
 
