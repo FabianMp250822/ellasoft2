@@ -84,6 +84,18 @@ export type Teacher = {
     createdAt: any;
 };
 
+export type Student = {
+    uid: string;
+    organizationId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    photoUrl: string;
+    gradeId: string;
+    createdAt: any;
+}
+
 
 // Organizations
 export async function getOrganizations(): Promise<Organization[]> {
@@ -208,6 +220,15 @@ export async function getTeachers(organizationId: string): Promise<Teacher[]> {
 }
 
 
+// Students
+export async function getStudents(organizationId: string): Promise<Student[]> {
+    const studentsCol = collection(db, "students");
+    const q = query(studentsCol, where("organizationId", "==", organizationId));
+    const studentsSnapshot = await getDocs(q);
+    return studentsSnapshot.docs.map(d => d.data() as Student);
+}
+
+
 // Admin Dashboard Setup Status
 async function checkCollection(collectionName: string, organizationId: string): Promise<boolean> {
     const colRef = collection(db, collectionName);
@@ -223,18 +244,14 @@ export async function getSetupStatus(organizationId: string) {
         grades,
         subjects,
         teachers,
-        // indicators, // Assuming collections exist for these
-        // students,
-        // academicLoad
+        students,
     ] = await Promise.all([
         checkCollection("academicPeriods", organizationId),
         checkCollection("gradingSystems", organizationId),
         checkCollection("grades", organizationId),
         checkCollection("subjects", organizationId),
         checkCollection("teachers", organizationId),
-        // checkCollection("performanceIndicators", organizationId),
-        // checkCollection("students", organizationId),
-        // checkCollection("academicLoad", organizationId),
+        checkCollection("students", organizationId),
     ]);
 
     return {
@@ -244,7 +261,7 @@ export async function getSetupStatus(organizationId: string) {
       subjects,
       indicators: false,
       teachers,
-      students: false,
+      students,
       academicLoad: false,
     };
 }

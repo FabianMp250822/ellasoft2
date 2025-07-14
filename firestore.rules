@@ -2,7 +2,7 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     function isSuperAdmin() {
       return request.auth != null && request.auth.token.superadmin == true;
     }
@@ -10,39 +10,44 @@ service cloud.firestore {
     function isOrganizationMember(orgId) {
       return request.auth != null && request.auth.token.organizationId == orgId;
     }
-
+    
     match /organizations/{orgId} {
-      allow read: if isSuperAdmin() || isOrganizationMember(orgId);
-      allow write: if isSuperAdmin();
-    }
-
-    match /academicPeriods/{periodId} {
-      allow read: if isOrganizationMember(resource.data.organizationId);
+      allow read: if isSuperAdmin();
     }
     
-    match /gradingSystems/{systemId} {
+    match /academicPeriods/{docId} {
       allow read: if isOrganizationMember(resource.data.organizationId);
-    }
-
-    match /grades/{gradeId} {
-      allow read: if isOrganizationMember(resource.data.organizationId);
+      // Write access is controlled via Cloud Function
     }
     
-    match /subjects/{subjectId} {
-      allow read: if isOrganizationMember(resource.data.organizationId);
+    match /gradingSystems/{docId} {
+        allow read: if isOrganizationMember(resource.data.organizationId);
+        // Write access is controlled via Cloud Function
+    }
+    
+    match /grades/{docId} {
+        allow read: if isOrganizationMember(resource.data.organizationId);
+        // Write access is controlled via Cloud Function
     }
 
-    match /performanceIndicators/{indicatorId} {
-       allow read: if isOrganizationMember(resource.data.organizationId);
+    match /subjects/{docId} {
+        allow read: if isOrganizationMember(resource.data.organizationId);
+         // Write access is controlled via Cloud Function
+    }
+    
+    match /performanceIndicators/{docId} {
+      allow read: if isOrganizationMember(resource.data.organizationId);
+      // Write access is exclusively controlled by the savePerformanceIndicators Cloud Function
     }
 
     match /teachers/{teacherId} {
       allow read: if isOrganizationMember(resource.data.organizationId);
+      // Write access is controlled via Cloud Function
     }
 
-    // Default deny all other reads/writes
-    match /{document=**} {
-      allow read, write: if false;
+    match /students/{studentId} {
+      allow read: if isOrganizationMember(resource.data.organizationId);
+      // Write access is controlled via Cloud Function
     }
   }
 }
