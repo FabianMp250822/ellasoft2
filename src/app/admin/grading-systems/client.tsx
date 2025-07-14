@@ -63,9 +63,11 @@ function SubmitButton({ children }: { children: React.ReactNode }) {
 
 function GradingSystemForm({
   system,
+  organizationId,
   onClose,
 }: {
   system?: GradingSystem;
+  organizationId: string;
   onClose: () => void;
 }) {
   const action = system ? updateGradingSystemAction : createGradingSystemAction;
@@ -86,6 +88,7 @@ function GradingSystemForm({
 
   return (
     <form action={dispatch}>
+      <input type="hidden" name="organizationId" value={organizationId} />
       {system && <input type="hidden" name="id" value={system.id} />}
       <div className="grid gap-4 py-4">
         <div className="grid grid-cols-4 items-center gap-4">
@@ -227,7 +230,7 @@ export function GradingSystemsClient() {
     if (claims?.organizationId) fetchData(claims.organizationId);
   }
 
-  if (loading) {
+  if (loading || !claims?.organizationId) {
     return <LoadingSpinner />;
   }
 
@@ -290,7 +293,7 @@ export function GradingSystemsClient() {
                 : "Add a new grading system to your institution."}
             </DialogDescription>
           </DialogHeader>
-          <GradingSystemForm system={currentSystem} onClose={handleDialogClose} />
+          <GradingSystemForm system={currentSystem} organizationId={claims.organizationId} onClose={handleDialogClose} />
         </DialogContent>
       </Dialog>
     </>

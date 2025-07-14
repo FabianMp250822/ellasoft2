@@ -62,9 +62,11 @@ function SubmitButton({ children }: { children: React.ReactNode }) {
 
 function SubjectForm({
   subject,
+  organizationId,
   onClose,
 }: {
   subject?: Subject;
+  organizationId: string;
   onClose: () => void;
 }) {
   const action = subject ? updateSubjectAction : createSubjectAction;
@@ -84,6 +86,7 @@ function SubjectForm({
 
   return (
     <form action={dispatch}>
+      <input type="hidden" name="organizationId" value={organizationId} />
       {subject && <input type="hidden" name="id" value={subject.id} />}
       <div className="grid gap-4 py-4">
         <div className="grid grid-cols-4 items-center gap-4">
@@ -193,7 +196,7 @@ export function SubjectsClient() {
     if (claims?.organizationId) fetchData(claims.organizationId);
   }
 
-  if (loading) {
+  if (loading || !claims?.organizationId) {
     return <LoadingSpinner />;
   }
 
@@ -254,7 +257,7 @@ export function SubjectsClient() {
                 : "Add a new subject to your institution."}
             </DialogDescription>
           </DialogHeader>
-          <SubjectForm subject={currentSubject} onClose={handleDialogClose} />
+          <SubjectForm subject={currentSubject} organizationId={claims.organizationId} onClose={handleDialogClose} />
         </DialogContent>
       </Dialog>
     </>

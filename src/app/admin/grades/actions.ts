@@ -3,25 +3,23 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { addGrade, deleteGrade, updateGrade } from "@/lib/data";
-import { getOrganizationIdFromSession } from "@/lib/server-utils";
-
 
 const FormSchema = z.object({
   id: z.string(),
   name: z.string().min(1, "Name is required"),
   groupName: z.string().min(1, "Group Name is required"),
+  organizationId: z.string().min(1, "Organization ID is required"),
 });
 
 const CreateGrade = FormSchema.omit({ id: true });
-const UpdateGrade = FormSchema;
+const UpdateGrade = FormSchema.omit({ organizationId: true });
 
 export async function createGradeAction(prevState: any, formData: FormData) {
   try {
-    const orgId = await getOrganizationIdFromSession();
-
     const validatedFields = CreateGrade.safeParse({
         name: formData.get("name"),
         groupName: formData.get("groupName"),
+        organizationId: formData.get("organizationId"),
     });
 
     if (!validatedFields.success) {
@@ -30,8 +28,9 @@ export async function createGradeAction(prevState: any, formData: FormData) {
         message: "Validation failed. Could not create grade.",
         };
     }
+    const { organizationId, ...gradeData } = validatedFields.data;
 
-    await addGrade(orgId, validatedFields.data);
+    await addGrade(organizationId, gradeData);
     revalidatePath("/admin/grades");
     return { message: "Grade created successfully." };
 

@@ -3,26 +3,26 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { addGradingSystem, deleteGradingSystem, updateGradingSystem } from "@/lib/data";
-import { getOrganizationIdFromSession } from "@/lib/server-utils";
 
 const FormSchema = z.object({
   id: z.string(),
   name: z.string().min(1, "Name is required"),
   description: z.string().min(1, "Description is required"),
   scale: z.string().min(1, "Scale is required"),
+  organizationId: z.string().min(1, "Organization ID is required"),
 });
 
 const CreateGradingSystem = FormSchema.omit({ id: true });
-const UpdateGradingSystem = FormSchema;
+const UpdateGradingSystem = FormSchema.omit({ organizationId: true });
 
 
 export async function createGradingSystemAction(prevState: any, formData: FormData) {
   try {
-    const orgId = await getOrganizationIdFromSession();
     const validatedFields = CreateGradingSystem.safeParse({
         name: formData.get("name"),
         description: formData.get("description"),
         scale: formData.get("scale"),
+        organizationId: formData.get("organizationId"),
     });
 
     if (!validatedFields.success) {
@@ -32,7 +32,9 @@ export async function createGradingSystemAction(prevState: any, formData: FormDa
         };
     }
 
-    await addGradingSystem(orgId, validatedFields.data);
+    const { organizationId, ...systemData } = validatedFields.data;
+    await addGradingSystem(organizationId, systemData);
+
     revalidatePath("/admin/grading-systems");
     return { message: "Grading system created successfully." };
   } catch (e: any) {

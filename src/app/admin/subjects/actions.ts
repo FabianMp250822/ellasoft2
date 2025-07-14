@@ -3,23 +3,23 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { addSubject, deleteSubject, updateSubject } from "@/lib/data";
-import { getOrganizationIdFromSession } from "@/lib/server-utils";
 
 const FormSchema = z.object({
   id: z.string(),
   name: z.string().min(1, "Name is required"),
   description: z.string().min(1, "Description is required"),
+  organizationId: z.string().min(1, "Organization ID is required"),
 });
 
 const CreateSubject = FormSchema.omit({ id: true });
-const UpdateSubject = FormSchema;
+const UpdateSubject = FormSchema.omit({ organizationId: true });
 
 export async function createSubjectAction(prevState: any, formData: FormData) {
   try {
-    const orgId = await getOrganizationIdFromSession();
     const validatedFields = CreateSubject.safeParse({
         name: formData.get("name"),
         description: formData.get("description"),
+        organizationId: formData.get("organizationId"),
     });
 
     if (!validatedFields.success) {
@@ -29,7 +29,8 @@ export async function createSubjectAction(prevState: any, formData: FormData) {
         };
     }
     
-    await addSubject(orgId, validatedFields.data);
+    const { organizationId, ...subjectData } = validatedFields.data;
+    await addSubject(organizationId, subjectData);
     revalidatePath("/admin/subjects");
     return { message: "Subject created successfully." };
   } catch (e: any) {

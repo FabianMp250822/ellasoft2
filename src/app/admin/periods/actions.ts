@@ -3,8 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { addAcademicPeriod, deleteAcademicPeriod, updateAcademicPeriod } from "@/lib/data";
-import { getOrganizationIdFromSession } from "@/lib/server-utils";
-
 
 const FormSchema = z.object({
   id: z.string(),
@@ -15,18 +13,19 @@ const FormSchema = z.object({
   endDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "Invalid end date",
   }),
+  organizationId: z.string().min(1, "Organization ID is required"),
 });
 
 const CreatePeriod = FormSchema.omit({ id: true });
-const UpdatePeriod = FormSchema;
+const UpdatePeriod = FormSchema.omit({ organizationId: true });
 
 export async function createPeriodAction(prevState: any, formData: FormData) {
   try {
-    const orgId = await getOrganizationIdFromSession();
     const validatedFields = CreatePeriod.safeParse({
         name: formData.get("name"),
         startDate: formData.get("startDate"),
         endDate: formData.get("endDate"),
+        organizationId: formData.get("organizationId"),
     });
 
     if (!validatedFields.success) {
@@ -36,10 +35,12 @@ export async function createPeriodAction(prevState: any, formData: FormData) {
         };
     }
 
-    await addAcademicPeriod(orgId, {
-        ...validatedFields.data,
-        startDate: new Date(validatedFields.data.startDate),
-        endDate: new Date(validatedFields.data.endDate),
+    const { organizationId, ...periodData } = validatedFields.data;
+
+    await addAcademicPeriod(organizationId, {
+        ...periodData,
+        startDate: new Date(periodData.startDate),
+        endDate: new Date(periodData.endDate),
     });
 
     revalidatePath("/admin/periods");

@@ -61,9 +61,11 @@ function SubmitButton({ children }: { children: React.ReactNode }) {
 
 function GradeForm({
   grade,
+  organizationId,
   onClose,
 }: {
   grade?: Grade;
+  organizationId: string;
   onClose: () => void;
 }) {
   const action = grade ? updateGradeAction : createGradeAction;
@@ -83,6 +85,7 @@ function GradeForm({
 
   return (
     <form action={dispatch}>
+      <input type="hidden" name="organizationId" value={organizationId} />
       {grade && <input type="hidden" name="id" value={grade.id} />}
       <div className="grid gap-4 py-4">
         <div className="grid grid-cols-4 items-center gap-4">
@@ -192,7 +195,7 @@ export function GradesClient() {
     if (claims?.organizationId) fetchData(claims.organizationId);
   };
 
-  if (loading) {
+  if (loading || !claims?.organizationId) {
     return <LoadingSpinner />;
   }
 
@@ -249,7 +252,7 @@ export function GradesClient() {
                     {currentGrade ? "Make changes to the grade here. Click save when you're done." : "Add a new grade to your institution."}
                 </DialogDescription>
                 </DialogHeader>
-                <GradeForm grade={currentGrade} onClose={handleDialogClose} />
+                <GradeForm grade={currentGrade} organizationId={claims.organizationId} onClose={handleDialogClose} />
             </DialogContent>
         </Dialog>
     </>

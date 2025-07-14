@@ -62,9 +62,11 @@ function SubmitButton({ children }: { children: React.ReactNode }) {
 
 function PeriodForm({
   period,
+  organizationId,
   onClose,
 }: {
   period?: AcademicPeriod;
+  organizationId: string;
   onClose: () => void;
 }) {
   const action = period ? updatePeriodAction : createPeriodAction;
@@ -88,6 +90,7 @@ function PeriodForm({
 
   return (
     <form action={dispatch}>
+      <input type="hidden" name="organizationId" value={organizationId} />
       {period && <input type="hidden" name="id" value={period.id} />}
       <div className="grid gap-4 py-4">
         <div className="grid grid-cols-4 items-center gap-4">
@@ -207,7 +210,7 @@ export function PeriodsClient() {
         if (claims?.organizationId) fetchData(claims.organizationId);
     };
 
-    if (loading) {
+    if (loading || !claims?.organizationId) {
         return <LoadingSpinner />;
     }
 
@@ -266,7 +269,7 @@ export function PeriodsClient() {
                 {currentPeriod ? "Make changes to the academic period here. Click save when you're done." : "Add a new academic period to your institution."}
                 </DialogDescription>
             </DialogHeader>
-            <PeriodForm period={currentPeriod} onClose={handleDialogClose} />
+            <PeriodForm period={currentPeriod} organizationId={claims.organizationId} onClose={handleDialogClose} />
             </DialogContent>
         </Dialog>
 
