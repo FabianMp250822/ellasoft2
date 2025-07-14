@@ -35,7 +35,7 @@ export const createAcademicPeriod = onCall(async (request) => {
     const periodData = {
       organizationId,
       name,
-      startDate: new Date(startDate),
+      startDate: new Date(startDate), // Firestore can handle date strings, but Date objects are more robust
       endDate: new Date(endDate),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
@@ -45,11 +45,13 @@ export const createAcademicPeriod = onCall(async (request) => {
     const successMessage = `Successfully created academic period '${name}' with ID ${docRef.id} for organization ${organizationId}.`;
     logger.info(successMessage);
     
+    // The onCall function should return a JSON-serializable object.
     return { success: true, message: successMessage, periodId: docRef.id };
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     logger.error(`Error creating academic period for organization ${organizationId}:`, error);
+    // Re-throw as an HttpsError to ensure the client gets a proper error response.
     throw new HttpsError("internal", `Failed to create academic period: ${errorMessage}`);
   }
 });
