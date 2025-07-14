@@ -1,16 +1,10 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * import {onCall} from "firebase-functions/v2/https";
- * import {onDocumentWritten} from "firebase-functions/v2/firestore";
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
-
 import * as admin from "firebase-admin";
-import {setSuperAdminClaim} from "./set-super-admin-claim";
-import {getOrganizations} from "./get-organizations";
 
 admin.initializeApp();
 
-export {setSuperAdminClaim, getOrganizations};
+// Auth functions
+export {setSuperAdminClaim} from "./users/set-super-admin-claim";
+
+// Organization functions
+export {createOrganization} from "./organizations/create";
+export {getOrganizations} from "./organizations/get";

@@ -63,10 +63,8 @@ export type Subject = {
 // Organizations
 export async function getOrganizations(): Promise<Organization[]> {
   try {
-    // When calling a function from a non-default codebase, you must use the name 'codebase-functionName'
-    const getOrganizationsFunction = httpsCallable(functions, 'academic-getOrganizations');
+    const getOrganizationsFunction = httpsCallable(functions, 'getOrganizations');
     const result = await getOrganizationsFunction();
-    // The result.data is already the array of organizations
     return result.data as Organization[];
   } catch (error) {
     console.error('Error fetching organizations via function:', error);
