@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm, SubmitHandler } from "react-hook-form";
@@ -106,9 +107,8 @@ export function CreateOrganizationForm({ onSuccess, onCancel }: CreateOrganizati
   };
 
   return (
-    <>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <ScrollArea className="h-[70vh] pr-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="flex h-full flex-col">
+        <ScrollArea className="flex-grow pr-6">
           <div className="space-y-6">
             
             {/* Organization Details */}
@@ -202,13 +202,12 @@ export function CreateOrganizationForm({ onSuccess, onCancel }: CreateOrganizati
             </div>
           </div>
         </ScrollArea>
-        <DialogFooter className="sticky bottom-0 bg-background pt-4">
+        <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4">
             <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Creating..." : "Create Organization"}
             </Button>
         </DialogFooter>
       </form>
-    </>
   );
 }

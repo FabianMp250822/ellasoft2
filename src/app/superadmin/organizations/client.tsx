@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -232,14 +233,16 @@ export function OrganizationsClient() {
       </Tabs>
 
       <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-2xl h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Create New Organization</DialogTitle>
             <DialogDescription>
               Fill out the form below to register a new institution on the platform.
             </DialogDescription>
           </DialogHeader>
-          <CreateOrganizationForm onSuccess={handleFormSuccess} onCancel={() => setDialogOpen(false)} />
+          <div className="flex-grow overflow-hidden">
+            <CreateOrganizationForm onSuccess={handleFormSuccess} onCancel={() => setDialogOpen(false)} />
+          </div>
         </DialogContent>
       </Dialog>
     </>
