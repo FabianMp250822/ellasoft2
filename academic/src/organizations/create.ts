@@ -2,10 +2,10 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import cors from "cors";
 import busboy from "busboy";
-import { v4 as uuidv4 } from "uuid";
-import type { Request, Response } from "express";
+import {v4 as uuidv4} from "uuid";
+import type {Request, Response} from "express";
 
-const corsHandler = cors({ origin: true });
+const corsHandler = cors({origin: true});
 
 const storage = admin.storage();
 const db = admin.firestore();
@@ -23,7 +23,7 @@ export const createOrganization = functions.https.onRequest(
     }
 
     corsHandler(req, res, () => {
-      const bb = busboy({ headers: req.headers });
+      const bb = busboy({headers: req.headers});
 
       const fields: Record<string, string> = {};
       const files: Record<
@@ -38,7 +38,7 @@ export const createOrganization = functions.https.onRequest(
           file: NodeJS.ReadableStream,
           info: busboy.FileInfo
         ) => {
-          const { filename, mimeType } = info;
+          const {filename, mimeType} = info;
           const chunks: Buffer[] = [];
           file.on("data", (chunk: Buffer) => {
             chunks.push(chunk);
@@ -77,7 +77,7 @@ export const createOrganization = functions.https.onRequest(
               `${path}/${uuidv4()}-${fileData.fileName}`
             );
             await fileUpload.save(fileData.buffer, {
-              metadata: { contentType: fileData.mimeType },
+              metadata: {contentType: fileData.mimeType},
             });
             const [url] = await fileUpload.getSignedUrl({
               action: "read",
@@ -94,7 +94,7 @@ export const createOrganization = functions.https.onRequest(
 
           await admin
             .auth()
-            .updateUser(adminUser.uid, { photoURL: adminPhotoUrl });
+            .updateUser(adminUser.uid, {photoURL: adminPhotoUrl});
 
           // 3. Crear la organización en Firestore
           const newOrganizationRef = db.collection("organizations").doc();
