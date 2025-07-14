@@ -49,22 +49,22 @@ export const createOrganization = onCall(async (request) => {
 
     // 4. Upload images to Storage and get URLs
     const uploadImage = async (base64String: string, path: string, fileName: string): Promise<string> => {
-        const base64EncodedImageString = base64String.replace(/^data:image\/\w+;base64,/, "");
-        const imageBuffer = Buffer.from(base64EncodedImageString, "base64");
-        
-        const bucket = storage.bucket(); // Get default bucket
-        const filePath = `${path}/${uuidv4()}-${fileName}`;
-        const fileUpload = bucket.file(filePath);
+      const base64EncodedImageString = base64String.replace(/^data:image\/\w+;base64,/, "");
+      const imageBuffer = Buffer.from(base64EncodedImageString, "base64");
 
-        await fileUpload.save(imageBuffer, {
-            metadata: { contentType: "image/jpeg" }, // Adjust content type if needed
-        });
+      const bucket = storage.bucket(); // Get default bucket
+      const filePath = `${path}/${uuidv4()}-${fileName}`;
+      const fileUpload = bucket.file(filePath);
 
-        // Make the file public
-        await fileUpload.makePublic();
-        
-        // Construct the public URL manually.
-        return `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+      await fileUpload.save(imageBuffer, {
+        metadata: {contentType: "image/jpeg"}, // Adjust content type if needed
+      });
+
+      // Make the file public
+      await fileUpload.makePublic();
+
+      // Construct the public URL manually.
+      return `https://storage.googleapis.com/${bucket.name}/${filePath}`;
     };
 
     const logoUrl = await uploadImage(data.logoBase64, "logos", `${data.orgName}-logo.jpg`);
