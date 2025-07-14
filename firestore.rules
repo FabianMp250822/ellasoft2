@@ -1,35 +1,37 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+    // Helper function to check if the user is a member of the organization
+    // by comparing the organizationId in their custom claims with the one in the document.
+    function isOrganizationMember(orgId) {
+      return request.auth.token.organizationId == orgId;
     }
-
+    
+    // Helper function to check if the user is a superadmin.
     function isSuperAdmin() {
       return request.auth.token.superadmin == true;
     }
 
-    function isOrganizationMember(orgId) {
-      return request.auth.token.organizationId == orgId;
-    }
-
+    // Organizations can be read by superadmins only.
     match /organizations/{orgId} {
       allow read, write: if isSuperAdmin();
     }
-
-    // Rules for collections associated with an organization
+    
+    // Rules for collections that belong to an organization.
+    // Users can read/write data only for their own organization.
     match /academicPeriods/{docId} {
       allow read: if isOrganizationMember(resource.data.organizationId);
       allow write: if isOrganizationMember(request.resource.data.organizationId);
     }
-
+    
     match /gradingSystems/{docId} {
       allow read: if isOrganizationMember(resource.data.organizationId);
       allow write: if isOrganizationMember(request.resource.data.organizationId);
     }
-
+    
     match /grades/{docId} {
       allow read: if isOrganizationMember(resource.data.organizationId);
       allow write: if isOrganizationMember(request.resource.data.organizationId);
@@ -40,9 +42,15 @@ service cloud.firestore {
       allow write: if isOrganizationMember(request.resource.data.organizationId);
     }
 
-    // Default deny all other access
-    match /{document=**} {
-      allow read, write: if false;
-    }
+    // Add other organization-specific collections here following the same pattern.
+    // For example:
+    // match /teachers/{docId} {
+    //   allow read: if isOrganizationMember(resource.data.organizationId);
+    //   allow write: if isOrganizationMember(request.resource.data.organizationId);
+    // }
+    // match /students/{docId} {
+    //   allow read: if isOrganizationMember(resource.data.organizationId);
+    //   allow write: if isOrganizationMember(request.resource.data.organizationId);
+    // }
   }
 }
