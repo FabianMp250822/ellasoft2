@@ -2,7 +2,6 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
-import {v4 as uuidv4} from "uuid";
 
 // Helper to upload a base64 image and return its public URL
 const uploadImage = async (dataUri: string, path: string): Promise<string> => {
@@ -20,7 +19,9 @@ const uploadImage = async (dataUri: string, path: string): Promise<string> => {
   const buffer = Buffer.from(base64Data, "base64");
 
   const bucket = admin.storage().bucket();
-  const fileName = `${path}/${uuidv4()}`;
+  // Generate a unique file name, but keep the extension
+  const fileExtension = mimeType.split('/')[1];
+  const fileName = `${path}/${Date.now()}.${fileExtension}`;
   const file = bucket.file(fileName);
 
   await file.save(buffer, {
@@ -45,7 +46,7 @@ export const createOrganization = onCall(async (request) => {
   const data = request.data;
   const requiredFields = [
     "orgName", "orgEmail", "logoDataUri",
-    "adminEmail", "adminPassword", "adminFirstName", "adminLastName", "adminPhotoDataUri",
+    "adminEmail", "adminPassword", "adminFirstName", "adminLastName", "adminPhotoDataUri", "adminPhone",
   ];
   for (const field of requiredFields) {
     if (!data[field]) {
@@ -80,12 +81,16 @@ export const createOrganization = onCall(async (request) => {
     orgId = orgDocRef.id;
     logger.info(`Organization document created with ID: ${orgId}`);
 
+    // Format phone number to E.164 standard (assuming Colombia country code +57)
+    const adminPhoneNumber = data.adminPhone.startsWith("+") ? data.adminPhone : `+57${data.adminPhone}`;
+
+
     // 4. Create the admin user in Firebase Auth
     const adminUser = await admin.auth().createUser({
       email: data.adminEmail,
       password: data.adminPassword,
       displayName: `${data.adminFirstName} ${data.adminLastName}`,
-      phoneNumber: data.adminPhone,
+      phoneNumber: adminPhoneNumber,
       photoURL: adminPhotoUrl,
     });
     logger.info(`Admin user created with UID: ${adminUser.uid}`);
