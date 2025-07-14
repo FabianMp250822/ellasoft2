@@ -6,13 +6,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getSubjects } from "@/lib/data";
 import { SubjectsClient } from "./client";
 
 
-export default async function SubjectsPage() {
-  const subjects = await getSubjects('org_1');
-
+export default function SubjectsPage() {
   return (
     <>
       <PageHeader
@@ -27,7 +24,7 @@ export default async function SubjectsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <SubjectsClient data={subjects} />
+          <SubjectsClient />
         </CardContent>
       </Card>
     </>

@@ -14,6 +14,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -23,7 +24,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
 import {
@@ -45,6 +45,9 @@ import type { Grade } from "@/lib/data";
 import { useFormState, useFormStatus } from "react-dom";
 import { createGradeAction, updateGradeAction, deleteGradeAction } from "./actions";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/auth-context";
+import { getGrades } from "@/lib/data";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 function SubmitButton({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus();
@@ -143,12 +146,33 @@ function DeleteGradeDialog({ gradeId, onDeleted }: { gradeId: string, onDeleted:
     );
 }
 
-export function GradesClient({ data }: { data: Grade[] }) {
+export function GradesClient() {
+  const [data, setData] = React.useState<Grade[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [isDialogOpen, setDialogOpen] = React.useState(false);
   const [isMenuOpen, setMenuOpen] = React.useState<string | null>(null);
-  const [currentGrade, setCurrentGrade] = React.useState<Grade | undefined>(
-    undefined
-  );
+  const [currentGrade, setCurrentGrade] = React.useState<Grade | undefined>(undefined);
+  const { user, claims } = useAuth();
+  const { toast } = useToast();
+
+  const fetchData = React.useCallback(async (orgId: string) => {
+    setLoading(true);
+    try {
+      const grades = await getGrades(orgId);
+      setData(grades);
+    } catch (error) {
+      console.error("Failed to fetch grades:", error);
+      toast({ title: "Error", description: "Could not fetch grades.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  React.useEffect(() => {
+    if (user && claims?.organizationId) {
+      fetchData(claims.organizationId);
+    }
+  }, [user, claims, fetchData]);
 
   const handleEdit = (grade: Grade) => {
     setCurrentGrade(grade);
@@ -164,7 +188,12 @@ export function GradesClient({ data }: { data: Grade[] }) {
   const handleDialogClose = () => {
     setDialogOpen(false);
     setCurrentGrade(undefined);
+    if (claims?.organizationId) fetchData(claims.organizationId);
   };
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <>
@@ -201,7 +230,7 @@ export function GradesClient({ data }: { data: Grade[] }) {
                         Edit
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DeleteGradeDialog gradeId={grade.id} onDeleted={() => setMenuOpen(null)}/>
+                        <DeleteGradeDialog gradeId={grade.id} onDeleted={() => { setMenuOpen(null); if (claims?.organizationId) fetchData(claims.organizationId); }}/>
                     </DropdownMenuContent>
                     </DropdownMenu>
                 </TableCell>

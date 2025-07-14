@@ -3,6 +3,22 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { addGrade, deleteGrade, updateGrade } from "@/lib/data";
+import { auth } from "firebase-admin";
+import { getAuth } from "firebase-admin/auth";
+import { cookies } from "next/headers";
+
+
+async function getOrganizationId(): Promise<string> {
+    const sessionCookie = cookies().get("session")?.value || "";
+    if (!sessionCookie) {
+        throw new Error("User not authenticated");
+    }
+    const decodedClaims = await getAuth().verifySessionCookie(sessionCookie, true);
+    if (!decodedClaims.organizationId) {
+        throw new Error("Organization ID not found in claims");
+    }
+    return decodedClaims.organizationId;
+}
 
 const FormSchema = z.object({
   id: z.string(),
@@ -13,41 +29,52 @@ const FormSchema = z.object({
 const CreateGrade = FormSchema.omit({ id: true });
 const UpdateGrade = FormSchema;
 
-export async function createGradeAction(formData: FormData) {
-  const validatedFields = CreateGrade.safeParse({
-    name: formData.get("name"),
-    groupName: formData.get("groupName"),
-  });
+export async function createGradeAction(prevState: any, formData: FormData) {
+  try {
+    const orgId = await getOrganizationId();
 
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: "Validation failed. Could not create grade.",
-    };
+    const validatedFields = CreateGrade.safeParse({
+        name: formData.get("name"),
+        groupName: formData.get("groupName"),
+    });
+
+    if (!validatedFields.success) {
+        return {
+        errors: validatedFields.error.flatten().fieldErrors,
+        message: "Validation failed. Could not create grade.",
+        };
+    }
+
+    await addGrade(orgId, validatedFields.data);
+    revalidatePath("/admin/grades");
+    return { message: "Grade created successfully." };
+
+  } catch (e: any) {
+    return { message: e.message, errors: {} };
   }
-
-  await addGrade('org_1', validatedFields.data);
-  revalidatePath("/admin/grades");
-  return { message: "Grade created successfully." };
 }
 
-export async function updateGradeAction(formData: FormData) {
-  const validatedFields = UpdateGrade.safeParse({
-    id: formData.get("id"),
-    name: formData.get("name"),
-    groupName: formData.get("groupName"),
-  });
+export async function updateGradeAction(prevState: any, formData: FormData) {
+  try {
+    const validatedFields = UpdateGrade.safeParse({
+        id: formData.get("id"),
+        name: formData.get("name"),
+        groupName: formData.get("groupName"),
+    });
 
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: "Validation failed. Could not update grade.",
-    };
+    if (!validatedFields.success) {
+        return {
+        errors: validatedFields.error.flatten().fieldErrors,
+        message: "Validation failed. Could not update grade.",
+        };
+    }
+
+    await updateGrade(validatedFields.data.id, validatedFields.data);
+    revalidatePath("/admin/grades");
+    return { message: "Grade updated successfully." };
+  } catch (e: any) {
+    return { message: e.message, errors: {} };
   }
-
-  await updateGrade(validatedFields.data.id, validatedFields.data);
-  revalidatePath("/admin/grades");
-  return { message: "Grade updated successfully." };
 }
 
 export async function deleteGradeAction(gradeId: string) {

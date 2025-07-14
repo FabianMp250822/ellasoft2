@@ -6,13 +6,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getGradingSystems } from "@/lib/data";
 import { GradingSystemsClient } from "./client";
 
-export default async function GradingSystemsPage() {
-
-  const gradingSystems = await getGradingSystems('org_1');
-
+export default function GradingSystemsPage() {
   return (
     <>
       <PageHeader
@@ -27,7 +23,7 @@ export default async function GradingSystemsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <GradingSystemsClient data={gradingSystems} />
+          <GradingSystemsClient />
         </CardContent>
       </Card>
     </>

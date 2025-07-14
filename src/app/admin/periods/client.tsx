@@ -46,6 +46,9 @@ import type { AcademicPeriod } from "@/lib/data";
 import { useFormState, useFormStatus } from "react-dom";
 import { createPeriodAction, updatePeriodAction, deletePeriodAction } from "./actions";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/auth-context";
+import { getAcademicPeriods } from "@/lib/data";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 function SubmitButton({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus();
@@ -158,10 +161,33 @@ function DeletePeriodDialog({ periodId, onDeleted }: { periodId: string, onDelet
 }
 
 
-export function PeriodsClient({ data }: { data: AcademicPeriod[] }) {
+export function PeriodsClient() {
+    const [data, setData] = React.useState<AcademicPeriod[]>([]);
+    const [loading, setLoading] = React.useState(true);
     const [isDialogOpen, setDialogOpen] = React.useState(false);
     const [isMenuOpen, setMenuOpen] = React.useState<string | null>(null);
     const [currentPeriod, setCurrentPeriod] = React.useState<AcademicPeriod | undefined>(undefined);
+    const { user, claims } = useAuth();
+    const { toast } = useToast();
+
+    const fetchData = React.useCallback(async (orgId: string) => {
+        setLoading(true);
+        try {
+            const periods = await getAcademicPeriods(orgId);
+            setData(periods);
+        } catch (error) {
+            console.error("Failed to fetch academic periods:", error);
+            toast({ title: "Error", description: "Could not fetch academic periods.", variant: "destructive" });
+        } finally {
+            setLoading(false);
+        }
+    }, [toast]);
+
+    React.useEffect(() => {
+        if (user && claims?.organizationId) {
+            fetchData(claims.organizationId);
+        }
+    }, [user, claims, fetchData]);
 
     const handleEdit = (period: AcademicPeriod) => {
         setCurrentPeriod(period);
@@ -177,8 +203,12 @@ export function PeriodsClient({ data }: { data: AcademicPeriod[] }) {
     const handleDialogClose = () => {
         setDialogOpen(false);
         setCurrentPeriod(undefined);
+        if (claims?.organizationId) fetchData(claims.organizationId);
     };
 
+    if (loading) {
+        return <LoadingSpinner />;
+    }
 
   return (
     <>
@@ -217,7 +247,7 @@ export function PeriodsClient({ data }: { data: AcademicPeriod[] }) {
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                        <DeletePeriodDialog periodId={period.id} onDeleted={() => setMenuOpen(null)}/>
+                        <DeletePeriodDialog periodId={period.id} onDeleted={() => { setMenuOpen(null); if (claims?.organizationId) fetchData(claims.organizationId); }}/>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

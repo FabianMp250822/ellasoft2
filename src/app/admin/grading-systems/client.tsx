@@ -24,7 +24,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
 import {
@@ -48,6 +47,9 @@ import type { GradingSystem } from "@/lib/data";
 import { useFormState, useFormStatus } from "react-dom";
 import { createGradingSystemAction, updateGradingSystemAction, deleteGradingSystemAction } from "./actions";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/auth-context";
+import { getGradingSystems } from "@/lib/data";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 function SubmitButton({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus();
@@ -177,12 +179,35 @@ function DeleteSystemDialog({ systemId, onDeleted }: { systemId: string, onDelet
     );
 }
 
-export function GradingSystemsClient({ data }: { data: GradingSystem[] }) {
+export function GradingSystemsClient() {
+  const [data, setData] = React.useState<GradingSystem[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [isDialogOpen, setDialogOpen] = React.useState(false);
   const [isMenuOpen, setMenuOpen] = React.useState<string | null>(null);
   const [currentSystem, setCurrentSystem] = React.useState<
     GradingSystem | undefined
   >(undefined);
+  const { user, claims } = useAuth();
+  const { toast } = useToast();
+
+  const fetchData = React.useCallback(async (orgId: string) => {
+    setLoading(true);
+    try {
+      const systems = await getGradingSystems(orgId);
+      setData(systems);
+    } catch (error) {
+      console.error("Failed to fetch grading systems:", error);
+      toast({ title: "Error", description: "Could not fetch grading systems.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  React.useEffect(() => {
+    if (user && claims?.organizationId) {
+      fetchData(claims.organizationId);
+    }
+  }, [user, claims, fetchData]);
 
   const handleEdit = (system: GradingSystem) => {
     setCurrentSystem(system);
@@ -198,6 +223,11 @@ export function GradingSystemsClient({ data }: { data: GradingSystem[] }) {
   const handleDialogClose = () => {
     setDialogOpen(false);
     setCurrentSystem(undefined);
+    if (claims?.organizationId) fetchData(claims.organizationId);
+  }
+
+  if (loading) {
+    return <LoadingSpinner />;
   }
 
   return (
@@ -239,7 +269,7 @@ export function GradingSystemsClient({ data }: { data: GradingSystem[] }) {
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DeleteSystemDialog systemId={system.id} onDeleted={() => setMenuOpen(null)} />
+                      <DeleteSystemDialog systemId={system.id} onDeleted={() => { setMenuOpen(null); if (claims?.organizationId) fetchData(claims.organizationId);}} />
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

@@ -46,6 +46,9 @@ import type { Subject } from "@/lib/data";
 import { useFormState, useFormStatus } from "react-dom";
 import { createSubjectAction, updateSubjectAction, deleteSubjectAction } from "./actions";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/auth-context";
+import { getSubjects } from "@/lib/data";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 function SubmitButton({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus();
@@ -144,10 +147,33 @@ function DeleteSubjectDialog({ subjectId, onDeleted }: { subjectId: string, onDe
     );
 }
 
-export function SubjectsClient({ data }: { data: Subject[] }) {
+export function SubjectsClient() {
+  const [data, setData] = React.useState<Subject[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [isDialogOpen, setDialogOpen] = React.useState(false);
   const [isMenuOpen, setMenuOpen] = React.useState<string | null>(null);
   const [currentSubject, setCurrentSubject] = React.useState<Subject | undefined>(undefined);
+  const { user, claims } = useAuth();
+  const { toast } = useToast();
+
+  const fetchData = React.useCallback(async (orgId: string) => {
+    setLoading(true);
+    try {
+      const subjects = await getSubjects(orgId);
+      setData(subjects);
+    } catch (error) {
+      console.error("Failed to fetch subjects:", error);
+      toast({ title: "Error", description: "Could not fetch subjects.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  React.useEffect(() => {
+    if (user && claims?.organizationId) {
+      fetchData(claims.organizationId);
+    }
+  }, [user, claims, fetchData]);
 
   const handleEdit = (subject: Subject) => {
     setCurrentSubject(subject);
@@ -163,6 +189,11 @@ export function SubjectsClient({ data }: { data: Subject[] }) {
   const handleDialogClose = () => {
     setDialogOpen(false);
     setCurrentSubject(undefined);
+    if (claims?.organizationId) fetchData(claims.organizationId);
+  }
+
+  if (loading) {
+    return <LoadingSpinner />;
   }
 
   return (
@@ -202,7 +233,7 @@ export function SubjectsClient({ data }: { data: Subject[] }) {
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DeleteSubjectDialog subjectId={subject.id} onDeleted={() => setMenuOpen(null)} />
+                      <DeleteSubjectDialog subjectId={subject.id} onDeleted={() => { setMenuOpen(null); if (claims?.organizationId) fetchData(claims.organizationId);}} />
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

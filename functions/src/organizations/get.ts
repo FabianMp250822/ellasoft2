@@ -48,7 +48,7 @@ export const getOrganizations = onCall(async (request) => {
   } catch (error) {
     logger.error("Error fetching organizations:", error);
     if (error instanceof HttpsError) {
-        throw error;
+      throw error;
     }
     throw new HttpsError("internal", "Error fetching organizations");
   }
