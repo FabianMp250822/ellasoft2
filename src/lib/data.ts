@@ -273,6 +273,18 @@ export async function getAcademicLoads(organizationId: string): Promise<Academic
     }
 }
 
+export async function getTeacherAcademicLoads(): Promise<AcademicLoad[]> {
+    try {
+        // This function requires no parameters as it gets the teacher's identity from the auth context.
+        const getLoadsFunction = httpsCallable(functions, 'getTeacherAcademicLoads');
+        const result = await getLoadsFunction();
+        return result.data as AcademicLoad[];
+    } catch (error) {
+        console.error('Error fetching teacher academic loads via function:', error);
+        throw error;
+    }
+}
+
 export async function deleteAcademicLoad(id: string) {
     const deleteLoadFunction = httpsCallable(functions, 'deleteAcademicLoad');
     await deleteLoadFunction({ id });

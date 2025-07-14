@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -12,8 +11,8 @@ import {
 } from "@/components/ui/card";
 import { Users } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
-import { getAcademicLoads, getSubjects, getGrades, getStudentsByGrade } from "@/lib/data";
-import type { AcademicLoad, Subject, Grade, Student } from "@/lib/data";
+import { getTeacherAcademicLoads, getSubjects, getGrades, getStudentsByGrade } from "@/lib/data";
+import type { AcademicLoad, Subject, Grade } from "@/lib/data";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { useToast } from "@/hooks/use-toast";
 
@@ -29,22 +28,20 @@ export function TeacherDashboardClient() {
   const { user, claims } = useAuth();
   const { toast } = useToast();
 
-  const fetchData = React.useCallback(async (orgId: string, teacherId: string) => {
+  const fetchData = React.useCallback(async (orgId: string) => {
     setLoading(true);
     try {
-      const [allLoads, allSubjects, allGrades] = await Promise.all([
-        getAcademicLoads(orgId),
+      // Use the new, secure function to get only the current teacher's loads
+      const [teacherLoads, allSubjects, allGrades] = await Promise.all([
+        getTeacherAcademicLoads(),
         getSubjects(orgId),
         getGrades(orgId),
       ]);
-
-      const teacherLoads = allLoads.filter(load => load.teacherId === teacherId);
       
       const enrichedLoadsPromises = teacherLoads.map(async (load) => {
         const subject = allSubjects.find(s => s.id === load.subjectId);
         const grade = allGrades.find(g => g.id === load.gradeId);
         
-        // Fetch students for each grade to get the count
         const students = await getStudentsByGrade(load.gradeId);
 
         return {
@@ -69,7 +66,7 @@ export function TeacherDashboardClient() {
 
   React.useEffect(() => {
     if (user && claims?.organizationId) {
-      fetchData(claims.organizationId, user.uid);
+      fetchData(claims.organizationId);
     }
   }, [user, claims, fetchData]);
 
