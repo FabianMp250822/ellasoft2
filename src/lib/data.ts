@@ -111,6 +111,16 @@ export type Student = {
     createdAt: any;
 }
 
+export type AcademicLoad = {
+    id: string;
+    organizationId: string;
+    teacherId: string;
+    subjectId: string;
+    gradeId: string;
+    academicPeriodId: string;
+    createdAt: any;
+};
+
 
 // Organizations
 export async function getOrganizations(): Promise<Organization[]> {
@@ -244,6 +254,24 @@ export async function getStudents(organizationId: string): Promise<Student[]> {
 }
 
 
+// Academic Load
+export async function getAcademicLoads(organizationId: string): Promise<AcademicLoad[]> {
+    try {
+        const getLoadsFunction = httpsCallable(functions, 'getAcademicLoads');
+        const result = await getLoadsFunction({ organizationId });
+        return result.data as AcademicLoad[];
+    } catch (error) {
+        console.error('Error fetching academic loads via function:', error);
+        throw error;
+    }
+}
+
+export async function deleteAcademicLoad(id: string) {
+    const deleteLoadFunction = httpsCallable(functions, 'deleteAcademicLoad');
+    await deleteLoadFunction({ id });
+}
+
+
 // Admin Dashboard Setup Status
 async function checkCollection(collectionName: string, organizationId: string): Promise<boolean> {
     const colRef = collection(db, collectionName);
@@ -260,6 +288,7 @@ export async function getSetupStatus(organizationId: string) {
         subjects,
         teachers,
         students,
+        academicLoad,
     ] = await Promise.all([
         checkCollection("academicPeriods", organizationId),
         checkCollection("gradingSystems", organizationId),
@@ -267,6 +296,7 @@ export async function getSetupStatus(organizationId: string) {
         checkCollection("subjects", organizationId),
         checkCollection("teachers", organizationId),
         checkCollection("students", organizationId),
+        checkCollection("academicLoads", organizationId),
     ]);
 
     return {
@@ -274,9 +304,9 @@ export async function getSetupStatus(organizationId: string) {
       gradingSystems,
       grades,
       subjects,
-      indicators: false,
       teachers,
       students,
-      academicLoad: false,
+      academicLoad,
+      indicators: false, // This can be updated when indicators have a "completed" state
     };
 }

@@ -18,3 +18,6 @@ export {createStudent} from "./organizations/create-student";
 export {createGradingSystem} from "./organizations/create-grading-system";
 export {createGrade} from "./organizations/create-grade";
 export {createSubject} from "./organizations/create-subject";
+export {createAcademicLoad} from "./organizations/create-academic-load";
+export {getAcademicLoads} from "./organizations/get-academic-loads";
+export {deleteAcademicLoad} from "./organizations/delete-academic-load";

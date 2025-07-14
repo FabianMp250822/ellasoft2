@@ -52,13 +52,6 @@ const setupStepsConfig = [
       href: "/admin/teachers",
     },
     {
-      key: "indicators",
-      title: "Performance Indicators (AI)",
-      description: "Generate learning indicators.",
-      icon: <ClipboardList className="h-6 w-6" />,
-      href: "/admin/performance-indicators",
-    },
-    {
       key: "students",
       title: "Students",
       description: "Enroll students.",
@@ -71,6 +64,13 @@ const setupStepsConfig = [
       description: "Link teachers to subjects.",
       icon: <FileClock className="h-6 w-6" />,
       href: "/admin/academic-load",
+    },
+    {
+      key: "indicators",
+      title: "Performance Indicators (AI)",
+      description: "Generate learning indicators.",
+      icon: <ClipboardList className="h-6 w-6" />,
+      href: "/admin/performance-indicators",
     },
 ];
 
@@ -113,7 +113,7 @@ export function AdminDashboardClient() {
         <CardHeader>
           <CardTitle className="font-headline">Initial Configuration Guide</CardTitle>
           <CardDescription>
-            Complete these steps to make your institution operational on EduAI.
+            Complete these steps in order to make your institution operational on EduAI.
           </CardDescription>
         </CardHeader>
         <CardContent>
