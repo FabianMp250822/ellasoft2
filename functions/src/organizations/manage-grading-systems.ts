@@ -26,36 +26,36 @@ export const manageGradingSystems = onCall(async (request) => {
 
   try {
     switch (action) {
-      case "create": {
-        const {name, description, scale} = data;
-        if (!name || !description || !scale) {
-          throw new HttpsError("invalid-argument", "Missing required fields for create.");
-        }
-        const docRef = await db.collection("gradingSystems").add({
-          organizationId,
-          name,
-          description,
-          scale,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-        return {success: true, message: "Grading system created.", id: docRef.id};
+    case "create": {
+      const {name, description, scale} = data;
+      if (!name || !description || !scale) {
+        throw new HttpsError("invalid-argument", "Missing required fields for create.");
       }
-      case "update": {
-        if (!systemId || !data) {
-          throw new HttpsError("invalid-argument", "Missing systemId or data for update.");
-        }
-        await db.collection("gradingSystems").doc(systemId).update(data);
-        return {success: true, message: "Grading system updated."};
+      const docRef = await db.collection("gradingSystems").add({
+        organizationId,
+        name,
+        description,
+        scale,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return {success: true, message: "Grading system created.", id: docRef.id};
+    }
+    case "update": {
+      if (!systemId || !data) {
+        throw new HttpsError("invalid-argument", "Missing systemId or data for update.");
       }
-      case "delete": {
-        if (!systemId) {
-          throw new HttpsError("invalid-argument", "Missing systemId for delete.");
-        }
-        await db.collection("gradingSystems").doc(systemId).delete();
-        return {success: true, message: "Grading system deleted."};
+      await db.collection("gradingSystems").doc(systemId).update(data);
+      return {success: true, message: "Grading system updated."};
+    }
+    case "delete": {
+      if (!systemId) {
+        throw new HttpsError("invalid-argument", "Missing systemId for delete.");
       }
-      default:
-        throw new HttpsError("invalid-argument", "Invalid action.");
+      await db.collection("gradingSystems").doc(systemId).delete();
+      return {success: true, message: "Grading system deleted."};
+    }
+    default:
+      throw new HttpsError("invalid-argument", "Invalid action.");
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";

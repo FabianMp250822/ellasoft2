@@ -26,36 +26,36 @@ export const manageSubjects = onCall(async (request) => {
 
   try {
     switch (action) {
-      case "create": {
-        const {name, description, gradeId} = data;
-        if (!name || !description || !gradeId) {
-          throw new HttpsError("invalid-argument", "Missing required fields for create.");
-        }
-        const docRef = await db.collection("subjects").add({
-          organizationId,
-          name,
-          description,
-          gradeId,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-        return {success: true, message: "Subject created.", id: docRef.id};
+    case "create": {
+      const {name, description, gradeId} = data;
+      if (!name || !description || !gradeId) {
+        throw new HttpsError("invalid-argument", "Missing required fields for create.");
       }
-      case "update": {
-        if (!subjectId || !data) {
-          throw new HttpsError("invalid-argument", "Missing subjectId or data for update.");
-        }
-        await db.collection("subjects").doc(subjectId).update(data);
-        return {success: true, message: "Subject updated."};
+      const docRef = await db.collection("subjects").add({
+        organizationId,
+        name,
+        description,
+        gradeId,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return {success: true, message: "Subject created.", id: docRef.id};
+    }
+    case "update": {
+      if (!subjectId || !data) {
+        throw new HttpsError("invalid-argument", "Missing subjectId or data for update.");
       }
-      case "delete": {
-        if (!subjectId) {
-          throw new HttpsError("invalid-argument", "Missing subjectId for delete.");
-        }
-        await db.collection("subjects").doc(subjectId).delete();
-        return {success: true, message: "Subject deleted."};
+      await db.collection("subjects").doc(subjectId).update(data);
+      return {success: true, message: "Subject updated."};
+    }
+    case "delete": {
+      if (!subjectId) {
+        throw new HttpsError("invalid-argument", "Missing subjectId for delete.");
       }
-      default:
-        throw new HttpsError("invalid-argument", "Invalid action.");
+      await db.collection("subjects").doc(subjectId).delete();
+      return {success: true, message: "Subject deleted."};
+    }
+    default:
+      throw new HttpsError("invalid-argument", "Invalid action.");
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";

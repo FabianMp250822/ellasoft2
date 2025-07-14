@@ -26,35 +26,35 @@ export const manageGrades = onCall(async (request) => {
 
   try {
     switch (action) {
-      case "create": {
-        const {name, groupName} = data;
-        if (!name || !groupName) {
-          throw new HttpsError("invalid-argument", "Missing name or groupName for create.");
-        }
-        const docRef = await db.collection("grades").add({
-          organizationId,
-          name,
-          groupName,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-        return {success: true, message: "Grade created.", id: docRef.id};
+    case "create": {
+      const {name, groupName} = data;
+      if (!name || !groupName) {
+        throw new HttpsError("invalid-argument", "Missing name or groupName for create.");
       }
-      case "update": {
-        if (!gradeId || !data) {
-          throw new HttpsError("invalid-argument", "Missing gradeId or data for update.");
-        }
-        await db.collection("grades").doc(gradeId).update(data);
-        return {success: true, message: "Grade updated."};
+      const docRef = await db.collection("grades").add({
+        organizationId,
+        name,
+        groupName,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return {success: true, message: "Grade created.", id: docRef.id};
+    }
+    case "update": {
+      if (!gradeId || !data) {
+        throw new HttpsError("invalid-argument", "Missing gradeId or data for update.");
       }
-      case "delete": {
-        if (!gradeId) {
-          throw new HttpsError("invalid-argument", "Missing gradeId for delete.");
-        }
-        await db.collection("grades").doc(gradeId).delete();
-        return {success: true, message: "Grade deleted."};
+      await db.collection("grades").doc(gradeId).update(data);
+      return {success: true, message: "Grade updated."};
+    }
+    case "delete": {
+      if (!gradeId) {
+        throw new HttpsError("invalid-argument", "Missing gradeId for delete.");
       }
-      default:
-        throw new HttpsError("invalid-argument", "Invalid action.");
+      await db.collection("grades").doc(gradeId).delete();
+      return {success: true, message: "Grade deleted."};
+    }
+    default:
+      throw new HttpsError("invalid-argument", "Invalid action.");
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
