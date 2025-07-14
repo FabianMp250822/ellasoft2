@@ -11,7 +11,8 @@ import {
   getDoc,
   limit,
 } from "firebase/firestore";
-import { db } from "./firebase"; // We need to create this file to initialize firebase
+import { db, functions } from "./firebase"; 
+import { httpsCallable } from "firebase/functions";
 
 export type Organization = {
     id: string;
@@ -62,13 +63,11 @@ export type Subject = {
 // Organizations
 export async function getOrganizations(): Promise<Organization[]> {
   try {
-    const orgsCol = collection(db, "organizations");
-    const orgsSnapshot = await getDocs(orgsCol);
-    const orgsList = orgsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Organization));
-    return orgsList;
+    const getOrganizationsFunction = httpsCallable(functions, 'getOrganizations');
+    const result = await getOrganizationsFunction();
+    return result.data as Organization[];
   } catch (error) {
-    console.error('Error fetching organizations:', error);
-    // Return empty array instead of throwing to prevent crash
+    console.error('Error fetching organizations via function:', error);
     return [];
   }
 }
