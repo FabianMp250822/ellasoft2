@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/page-header';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { getGradebookData, getTeacherAcademicLoads, getSubjects, getGrades } from '@/lib/data';
+import { getTeacherAcademicLoads, getSubjects, getGrades } from '@/lib/data';
 import type { GradebookData, Activity, Student, StudentGrade, AcademicLoad, Subject, Grade } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,11 +44,29 @@ import {
 type EditableActivity = Activity & { isNew?: boolean, isEditing?: boolean };
 type EditableStudentGrades = { [activityId: string]: { score: number | string, id?: string } };
 
+type CreateOrUpdateActivityPayload = {
+    loadId: string;
+    activityId: string | null;
+    name: string;
+    percentage: number;
+};
+type CreateOrUpdateActivityResponse = {
+    success: boolean;
+    activityId: string;
+    message: string;
+};
+type CreateOrUpdateStudentGradePayload = {
+    loadId: string;
+    activityId: string;
+    studentId: string;
+    score: number;
+};
+
 // Define callable functions
 const getGradebookDataFn = httpsCallable< { loadId: string }, GradebookData>(functions, 'getGradebookData');
-const createOrUpdateActivityFn = httpsCallable(any, 'createOrUpdateActivity');
+const createOrUpdateActivityFn = httpsCallable<CreateOrUpdateActivityPayload, CreateOrUpdateActivityResponse>(functions, 'createOrUpdateActivity');
 const deleteActivityFn = httpsCallable<{ loadId: string; activityId: string }, { success: boolean }>(functions, 'deleteActivity');
-const createOrUpdateStudentGradeFn = httpsCallable(any, 'createOrUpdateStudentGrade');
+const createOrUpdateStudentGradeFn = httpsCallable<CreateOrUpdateStudentGradePayload, { success: boolean }>(functions, 'createOrUpdateStudentGrade');
 
 
 export default function GradebookPage() {
@@ -71,7 +89,7 @@ export default function GradebookPage() {
     const grades = studentGrades[studentId] || {};
     
     activities.forEach(activity => {
-        if (grades[activity.id] && typeof grades[activity.id].score === 'number') {
+        if (!activity.isNew && grades[activity.id] && typeof grades[activity.id].score === 'number') {
             const score = grades[activity.id].score as number;
             const percentage = activity.percentage / 100;
             finalGrade += score * percentage;
@@ -192,9 +210,9 @@ export default function GradebookPage() {
             activityUpdates.map(payload => createOrUpdateActivityFn(payload))
         );
 
-        const newActivityIdMap = activityResults.reduce((acc, result: any, index) => {
+        const newActivityIdMap = activityResults.reduce((acc, result, index) => {
             const originalActivity = activities[index];
-            if (originalActivity.isNew) {
+            if (originalActivity.isNew && result.data.success) {
                 acc[originalActivity.id] = result.data.activityId;
             }
             return acc;
@@ -203,14 +221,16 @@ export default function GradebookPage() {
         const gradePromises: Promise<any>[] = [];
         Object.entries(studentGrades).forEach(([studentId, grades]) => {
             Object.entries(grades).forEach(([tempActivityId, grade]) => {
-                if (typeof grade.score === 'number') {
+                if (typeof grade.score === 'number' && grade.score !== null) {
                     const finalActivityId = newActivityIdMap[tempActivityId] || tempActivityId;
-                    gradePromises.push(createOrUpdateStudentGradeFn({
-                        loadId,
-                        activityId: finalActivityId,
-                        studentId,
-                        score: grade.score
-                    }));
+                    if(finalActivityId) {
+                        gradePromises.push(createOrUpdateStudentGradeFn({
+                            loadId,
+                            activityId: finalActivityId,
+                            studentId,
+                            score: grade.score
+                        }));
+                    }
                 }
             });
         });
@@ -247,7 +267,7 @@ export default function GradebookPage() {
     return <PageHeader title="Gradebook" description="Could not load data." />;
   }
 
-  const totalPercentage = activities.reduce((sum, act) => sum + (act.percentage || 0), 0);
+  const totalPercentage = activities.reduce((sum, act) => sum + (act.isNew ? 0 : (act.percentage || 0)), 0);
 
   return (
     <div className="space-y-4">
@@ -344,6 +364,7 @@ export default function GradebookPage() {
                                 min="0"
                                 max="5"
                                 step="0.1"
+                                disabled={activity.isNew}
                             />
                         </TableCell>
                         ))}
@@ -360,5 +381,3 @@ export default function GradebookPage() {
     </div>
   );
 }
-
-    
