@@ -1,13 +1,13 @@
-
 /* eslint-disable max-len */
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import {v4 as uuidv4} from "uuid";
 import * as logger from "firebase-functions/logger";
 
-const storage = admin.storage();
-const db = admin.firestore();
-
+/**
+ * Creates an administrator user in Firebase Auth and assigns custom claims.
+ * This function NO LONGER handles Firestore document creation or file uploads.
+ * That logic is now managed on the client-side.
+ */
 export const createOrganization = onCall(async (request) => {
   // 1. Check if user is a superadmin
   if (request.auth?.token.superadmin !== true) {
@@ -18,17 +18,20 @@ export const createOrganization = onCall(async (request) => {
   }
 
   const data = request.data;
-  logger.info("Received data for organization creation:", {
+  logger.info("Received data for admin user creation:", {
     ...data,
-    logoBase64: "REDACTED",
-    adminPhotoBase64: "REDACTED",
+    adminPassword: "REDACTED",
   });
 
-  // 2. Validate input data
+  // 2. Validate input data for creating the admin user
   const requiredFields = [
-    "orgName", "orgAddress", "orgPhone", "orgEmail", "orgNit", "orgDane",
-    "userLimit", "adminFirstName", "adminLastName", "adminEmail", "adminPassword",
-    "adminPhone", "logoBase64", "adminPhotoBase64",
+    "adminEmail",
+    "adminPassword",
+    "adminFirstName",
+    "adminLastName",
+    "adminPhone",
+    "adminPhotoUrl",
+    "organizationId", // Crucial: The ID of the doc created on the client
   ];
 
   for (const field of requiredFields) {
@@ -44,72 +47,26 @@ export const createOrganization = onCall(async (request) => {
       password: data.adminPassword,
       displayName: `${data.adminFirstName} ${data.adminLastName}`,
       phoneNumber: data.adminPhone,
+      photoURL: data.adminPhotoUrl, // URL is now passed from the client
     });
     logger.info(`Admin user created with UID: ${adminUser.uid}`);
 
-    // 4. Upload images to Storage and get URLs
-    const uploadImage = async (base64String: string, path: string, fileName: string): Promise<string> => {
-      const base64EncodedImageString = base64String.replace(/^data:image\/\w+;base64,/, "");
-      const imageBuffer = Buffer.from(base64EncodedImageString, "base64");
 
-      const bucket = storage.bucket(); // Get default bucket
-      const filePath = `${path}/${uuidv4()}-${fileName}`;
-      const fileUpload = bucket.file(filePath);
-
-      await fileUpload.save(imageBuffer, {
-        metadata: {contentType: "image/jpeg"}, // Adjust content type if needed
-      });
-
-      // Make the file public
-      await fileUpload.makePublic();
-
-      // Construct the public URL manually.
-      return `https://storage.googleapis.com/${bucket.name}/${filePath}`;
-    };
-
-    const logoUrl = await uploadImage(data.logoBase64, "logos", `${data.orgName}-logo.jpg`);
-    const adminPhotoUrl = await uploadImage(data.adminPhotoBase64, "admin_photos", `${adminUser.uid}-photo.jpg`);
-
-    // Update the user's photoURL
-    await admin.auth().updateUser(adminUser.uid, {photoURL: adminPhotoUrl});
-    logger.info("Images uploaded and user photoURL updated.");
-
-    // 5. Create the organization document in Firestore
-    const newOrganizationRef = db.collection("organizations").doc();
-    const newOrgData = {
-      name: data.orgName,
-      address: data.orgAddress,
-      phone: data.orgPhone,
-      email: data.orgEmail,
-      nit: data.orgNit,
-      dane: data.orgDane,
-      userLimit: parseInt(data.userLimit, 10),
-      logoUrl: logoUrl,
-      adminId: adminUser.uid,
-      adminPhotoUrl: adminPhotoUrl,
-      status: "Active",
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      userCount: 1, // Starts with the admin user
-      dataConsumption: 0,
-    };
-    await newOrganizationRef.set(newOrgData);
-    logger.info(`Organization document created with ID: ${newOrganizationRef.id}`);
-
-    // 6. Assign custom claims to the admin user
+    // 4. Assign custom claims to the admin user
     await admin.auth().setCustomUserClaims(adminUser.uid, {
       admin: true,
-      organizationId: newOrganizationRef.id,
+      organizationId: data.organizationId,
     });
     logger.info(`Custom claims set for admin user: ${adminUser.uid}`);
 
     return {
       success: true,
-      message: "Organization created successfully",
-      organizationId: newOrganizationRef.id,
+      message: "Admin user created and claims assigned successfully.",
+      userId: adminUser.uid,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    logger.error("Error creating organization:", error);
-    throw new HttpsError("internal", `Failed to create organization: ${errorMessage}`);
+    logger.error("Error creating admin user:", error);
+    throw new HttpsError("internal", `Failed to create admin user: ${errorMessage}`);
   }
 });

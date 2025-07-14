@@ -9,8 +9,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
-import { auth } from "@/lib/firebase";
 import React from "react";
+import { functions, storage, db } from "@/lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
+import { v4 as uuidv4 } from 'uuid';
 
 export type FormValues = {
   // Organization fields
@@ -37,14 +41,15 @@ interface CreateOrganizationFormProps {
   onCancel: () => void;
 }
 
-// Helper to convert a file to a Base64 string
-const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = error => reject(error);
-});
-
+// Helper to upload a file and get its public URL
+const uploadFileAndGetURL = async (file: File, path: string): Promise<string> => {
+    if (!file) throw new Error("File not provided for upload.");
+    const filePath = `${path}/${uuidv4()}-${file.name}`;
+    const storageRef = ref(storage, filePath);
+    await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(storageRef);
+    return downloadURL;
+};
 
 export function CreateOrganizationForm({ onSuccess, onCancel }: CreateOrganizationFormProps) {
   const {
@@ -55,73 +60,77 @@ export function CreateOrganizationForm({ onSuccess, onCancel }: CreateOrganizati
   const { toast } = useToast();
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
+    let orgId = '';
     try {
-        const user = auth.currentUser;
-        if (!user) {
-            throw new Error("You must be logged in to create an organization.");
+        if (!data.logo[0] || !data.adminPhoto[0]) {
+            throw new Error("Logo and Administrator Photo are required.");
         }
 
-        const idToken = await user.getIdToken();
-        const functionUrl = 'https://createorganization-4t6bsm5a6q-uc.a.run.app';
+        // 1. Upload images to Firebase Storage
+        toast({ title: "Step 1/3: Uploading Images..." });
+        const logoUrl = await uploadFileAndGetURL(data.logo[0], "logos");
+        const adminPhotoUrl = await uploadFileAndGetURL(data.adminPhoto[0], "admin_photos");
 
-        const logoBase64 = data.logo.length > 0 ? await toBase64(data.logo[0]) : null;
-        const adminPhotoBase64 = data.adminPhoto.length > 0 ? await toBase64(data.adminPhoto[0]) : null;
-
-        if (!logoBase64 || !adminPhotoBase64) {
-            toast({
-                title: "Error",
-                description: "Logo and administrator photo are required.",
-                variant: "destructive",
-            });
-            return;
-        }
-
-        const rawPayload = {
-            ...data,
+        // 2. Create the organization document in Firestore
+        toast({ title: "Step 2/3: Creating Organization Document..." });
+        const orgCollectionRef = collection(db, "organizations");
+        const newOrgData = {
+            name: data.orgName,
+            address: data.orgAddress,
+            phone: data.orgPhone,
+            email: data.orgEmail,
+            nit: data.orgNit,
+            dane: data.orgDane,
             userLimit: Number(data.userLimit),
-            logoBase64,
-            adminPhotoBase64,
+            logoUrl: logoUrl,
+            adminId: '', // Will be updated later
+            adminPhotoUrl: adminPhotoUrl, // We already have it
+            status: "Active",
+            createdAt: serverTimestamp(),
+            userCount: 1,
+            dataConsumption: 0,
+        };
+        const orgDocRef = await addDoc(orgCollectionRef, newOrgData);
+        orgId = orgDocRef.id;
+
+        // 3. Call the simplified Cloud Function to create the Auth user and set claims
+        toast({ title: "Step 3/3: Creating Administrator Account..." });
+        const createOrganizationFunction = httpsCallable(functions, 'createOrganization');
+        
+        const functionPayload = {
+            organizationId: orgId,
+            adminEmail: data.adminEmail,
+            adminPassword: data.adminPassword,
+            adminFirstName: data.adminFirstName,
+            adminLastName: data.adminLastName,
+            adminPhone: data.adminPhone,
+            adminPhotoUrl: adminPhotoUrl,
         };
         
-        delete (rawPayload as any).logo;
-        delete (rawPayload as any).adminPhoto;
-        
-        const payload = { data: rawPayload };
+        const result = await createOrganizationFunction(functionPayload);
+        const resultData = result.data as { success: boolean; message: string; userId: string };
 
-        const response = await fetch(functionUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${idToken}`,
-            },
-            body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error?.message || 'Failed to create organization.');
+        if (!resultData.success) {
+            // Rollback: If function fails, we should ideally delete the Firestore doc and images.
+            // For now, we'll show an error.
+            throw new Error(resultData.message || "Admin user creation failed.");
         }
 
-        const result = await response.json();
-        const resultData = result.result as { success: boolean; message: string };
+        // 4. Final step: Update the organization document with the new admin's UID
+        const orgDocToUpdate = doc(db, "organizations", orgId);
+        await updateDoc(orgDocToUpdate, { adminId: resultData.userId });
 
-        if (resultData.success) {
-            toast({ title: "Success", description: resultData.message });
-            onSuccess();
-        } else {
-            toast({
-                title: "Error",
-                description: resultData.message,
-                variant: "destructive",
-            });
-        }
+        toast({ title: "Success!", description: "Organization and admin created successfully." });
+        onSuccess();
+
     } catch (error: any) {
         console.error("Error creating organization:", error);
         toast({
-            title: "Function Error",
-            description: error.message || "An unexpected error occurred.",
+            title: "Creation Failed",
+            description: error.message || "An unexpected error occurred during the process.",
             variant: "destructive",
         });
+        // Here you could add rollback logic, e.g., delete the Firestore document if it was created
     }
   };
 
