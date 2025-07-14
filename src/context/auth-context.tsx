@@ -37,13 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setLoading(true);
       if (user) {
         try {
           const tokenResult = await user.getIdTokenResult();
           setUser(user);
           setClaims(tokenResult.claims);
           
-          // Redirect logic after login or on page refresh - only on initial check or login page
           if (!initialAuthChecked || pathname === '/') {
             const newRole = tokenResult.claims.superadmin 
               ? 'superadmin' 
@@ -55,7 +55,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               ? 'student' 
               : null;
             
-            // Only redirect if we're on the login page and have a role
             if (pathname === '/' && newRole) {
               router.push(`/${newRole}/dashboard`);
             }
@@ -68,7 +67,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setUser(null);
         setClaims(null);
-        // Only redirect to login if not already there and not initial load
         if (initialAuthChecked && pathname !== '/') {
           router.push('/');
         }
@@ -88,21 +86,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-      // Don't set loading to false here - onAuthStateChanged will handle it
     } catch (e: any) {
       setError(e.message || "Failed to sign in.");
-      setLoading(false); // Only set loading to false on error
+      setLoading(false);
     }
   };
 
   const logout = async () => {
-    setLoading(true);
     try {
       await signOut(auth);
-      router.push('/');
     } catch (e: any) {
       console.error("Logout failed:", e);
-    } finally {
+      // Even if logout fails, we might want to ensure loading is false.
       setLoading(false);
     }
   };
@@ -111,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={value}>
-        {loading ? <LoadingSpinner fullScreen /> : children}
+        {initialAuthChecked ? children : <LoadingSpinner fullScreen />}
     </AuthContext.Provider>
   )
 }
