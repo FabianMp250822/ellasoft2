@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { addAcademicPeriod, deleteAcademicPeriod, updateAcademicPeriod } from "@/lib/data";
+import { deleteAcademicPeriod, updateAcademicPeriod } from "@/lib/data";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/lib/firebase";
+
 
 const FormSchema = z.object({
   id: z.string(),
@@ -48,21 +51,24 @@ export async function createPeriodAction(prevState: ActionState, formData: FormD
   }
 
   try {
-    const { organizationId, ...periodData } = validatedFields.data;
+    const createAcademicPeriodFn = httpsCallable(functions, 'createAcademicPeriod');
+    
+    // The callable function is invoked by the Next.js server, but the context
+    // (like auth) from the original client request needs to be passed implicitly if using App Check,
+    // or handled via the callable function's security rules which check request.auth.
+    const result = await createAcademicPeriodFn(validatedFields.data);
+    const resultData = result.data as { success: boolean; message: string; };
 
-    await addAcademicPeriod(organizationId, {
-        ...periodData,
-        startDate: new Date(periodData.startDate),
-        endDate: new Date(periodData.endDate),
-    });
-
+    if (!resultData.success) {
+      throw new Error(resultData.message || "Cloud function returned failure.");
+    }
+    
     revalidatePath("/admin/periods");
     return { success: true, message: "Period created successfully." };
+
   } catch (e: any) {
-    if (e.code === 'permission-denied') {
-        return { success: false, message: "Permission Denied: You do not have the required permissions to create a period." };
-    }
-    return { success: false, message: `An error occurred: ${e.message}` };
+    console.error("Error calling createAcademicPeriod function:", e);
+    return { success: false, message: e.message || "An unexpected error occurred." };
   }
 }
 
