@@ -87,12 +87,27 @@ export type Teacher = {
 export type Student = {
     uid: string;
     organizationId: string;
+    // Personal Data
     firstName: string;
     lastName: string;
     email: string;
     phone: string;
     photoUrl: string;
+    documentType: string;
+    documentNumber: string;
+    dateOfBirth: string;
+    gender: string;
+    address: string;
+    // Academic Data
     gradeId: string;
+    // Family Data
+    guardianName: string;
+    guardianPhone: string;
+    guardianEmail: string;
+    motherName?: string;
+    motherPhone?: string;
+    fatherName?: string;
+    fatherPhone?: string;
     createdAt: any;
 }
 

@@ -40,20 +40,43 @@ export const createStudent = onCall(async (request) => {
 
   const {
     organizationId,
+    // Personal Data
     firstName,
     lastName,
     email,
     password,
     phone,
     photoDataUri,
+    documentType,
+    documentNumber,
+    dateOfBirth,
+    gender,
+    address,
+    // Academic Data
     gradeId,
+    // Family Data
+    guardianName,
+    guardianPhone,
+    guardianEmail,
+    motherName,
+    motherPhone,
+    fatherName,
+    fatherPhone,
   } = request.data;
   const tokenOrgId = request.auth.token.organizationId;
 
   // 2. Validate input
-  if (!organizationId || !firstName || !lastName || !email || !password || !phone || !photoDataUri || !gradeId) {
-    throw new HttpsError("invalid-argument", "Missing required fields.");
+  const requiredFields = [
+    "organizationId", "firstName", "lastName", "email", "password", "phone",
+    "photoDataUri", "gradeId", "documentType", "documentNumber", "dateOfBirth",
+    "gender", "address", "guardianName", "guardianPhone", "guardianEmail",
+  ];
+  for (const field of requiredFields) {
+      if (!request.data[field]) {
+          throw new HttpsError("invalid-argument", `Missing required field: ${field}.`);
+      }
   }
+
 
   // 3. Security Check: Ensure the admin belongs to the organization they're trying to modify.
   if (organizationId !== tokenOrgId) {
@@ -88,12 +111,27 @@ export const createStudent = onCall(async (request) => {
     const studentData = {
       uid: studentUid,
       organizationId,
+      // Personal Data
       firstName,
       lastName,
       email,
       phone,
       photoUrl,
+      documentType,
+      documentNumber,
+      dateOfBirth,
+      gender,
+      address,
+      // Academic Data
       gradeId,
+      // Family Data
+      guardianName,
+      guardianPhone,
+      guardianEmail,
+      motherName,
+      motherPhone,
+      fatherName,
+      fatherPhone,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
