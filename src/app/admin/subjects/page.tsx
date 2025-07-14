@@ -20,7 +20,7 @@ export default function SubjectsPage() {
         <CardHeader>
           <CardTitle>Registered Subjects</CardTitle>
           <CardDescription>
-            View and manage all subjects for your institution.
+            View and manage all subjects and assign them to a grade.
           </CardDescription>
         </CardHeader>
         <CardContent>

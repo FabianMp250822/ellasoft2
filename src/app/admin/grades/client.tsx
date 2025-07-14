@@ -89,7 +89,7 @@ function GradeForm({
           <Label htmlFor="name" className="text-right">
             Grade Name
           </Label>
-          <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
+          <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. 9th Grade, 1st Semester" className="col-span-3" />
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="groupName" className="text-right">
@@ -134,7 +134,7 @@ function DeleteGradeDialog({ gradeId, onDeleted }: { gradeId: string, onDeleted:
                 <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the grade.
+                        This action cannot be undone. This will permanently delete the grade and group combination.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -199,7 +199,7 @@ export function GradesClient() {
     <>
         <div className="flex justify-end mb-4">
             <Button onClick={handleCreate}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Create Grade
+                <PlusCircle className="mr-2 h-4 w-4" /> Create Grade/Group
             </Button>
         </div>
         <div className="rounded-md border">
@@ -207,8 +207,10 @@ export function GradesClient() {
             <TableHeader>
             <TableRow>
                 <TableHead>Grade Name</TableHead>
-                <TableHead>Group</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>Group Name</TableHead>
+                <TableHead>
+                    <span className="sr-only">Actions</span>
+                </TableHead>
             </TableRow>
             </TableHeader>
             <TableBody>
@@ -243,9 +245,9 @@ export function GradesClient() {
         <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                <DialogTitle>{currentGrade ? "Edit Grade" : "Create Grade"}</DialogTitle>
+                <DialogTitle>{currentGrade ? "Edit Grade/Group" : "Create Grade/Group"}</DialogTitle>
                 <DialogDescription>
-                    {currentGrade ? "Make changes to the grade here. Click save when you're done." : "Add a new grade to your institution."}
+                    {currentGrade ? "Make changes to the grade/group combination here." : "Add a new grade and group to your institution."}
                 </DialogDescription>
                 </DialogHeader>
                 <GradeForm grade={currentGrade} organizationId={claims.organizationId} onClose={handleDialogClose} />

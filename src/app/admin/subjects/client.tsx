@@ -37,40 +37,54 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, PlusCircle, Trash2, Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { Subject } from "@/lib/data";
+import type { Subject, Grade } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
-import { getSubjects, addSubject, updateSubject, deleteSubject } from "@/lib/data";
+import { getSubjects, addSubject, updateSubject, deleteSubject, getGrades } from "@/lib/data";
 import { LoadingSpinner } from "@/components/loading-spinner";
 
 function SubjectForm({
   subject,
   organizationId,
+  grades,
   onClose,
 }: {
   subject?: Subject;
   organizationId: string;
+  grades: Grade[];
   onClose: () => void;
 }) {
   const [name, setName] = React.useState(subject?.name || "");
   const [description, setDescription] = React.useState(subject?.description || "");
+  const [gradeId, setGradeId] = React.useState(subject?.gradeId || "");
   const [isSubmitting, setSubmitting] = React.useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!gradeId) {
+        toast({ title: "Error", description: "Please select a grade.", variant: "destructive" });
+        return;
+    }
     setSubmitting(true);
     try {
         if (subject) {
-            await updateSubject(subject.id, { name, description });
+            await updateSubject(subject.id, { name, description, gradeId });
             toast({ title: "Success", description: "Subject updated successfully." });
         } else {
-            await addSubject(organizationId, { name, description });
+            await addSubject(organizationId, { name, description, gradeId });
             toast({ title: "Success", description: "Subject created successfully." });
         }
         onClose();
@@ -96,6 +110,21 @@ function SubjectForm({
             Description
           </Label>
           <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="col-span-3" placeholder="A brief description of the subject"/>
+        </div>
+        <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="gradeId" className="text-right">
+                Grade
+            </Label>
+            <Select onValueChange={setGradeId} defaultValue={gradeId}>
+                <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select a grade" />
+                </SelectTrigger>
+                <SelectContent>
+                    {grades.map(grade => (
+                        <SelectItem key={grade.id} value={grade.id}>{grade.name} - {grade.groupName}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
         </div>
       </div>
       <DialogFooter>
@@ -147,7 +176,8 @@ function DeleteSubjectDialog({ subjectId, onDeleted }: { subjectId: string, onDe
 }
 
 export function SubjectsClient() {
-  const [data, setData] = React.useState<Subject[]>([]);
+  const [subjects, setSubjects] = React.useState<Subject[]>([]);
+  const [grades, setGrades] = React.useState<Grade[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [isDialogOpen, setDialogOpen] = React.useState(false);
   const [isMenuOpen, setMenuOpen] = React.useState<string | null>(null);
@@ -158,11 +188,15 @@ export function SubjectsClient() {
   const fetchData = React.useCallback(async (orgId: string) => {
     setLoading(true);
     try {
-      const subjects = await getSubjects(orgId);
-      setData(subjects);
+      const [subjectsData, gradesData] = await Promise.all([
+        getSubjects(orgId),
+        getGrades(orgId),
+      ]);
+      setSubjects(subjectsData);
+      setGrades(gradesData);
     } catch (error) {
-      console.error("Failed to fetch subjects:", error);
-      toast({ title: "Error", description: "Could not fetch subjects.", variant: "destructive" });
+      console.error("Failed to fetch data:", error);
+      toast({ title: "Error", description: "Could not fetch subjects or grades.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -191,6 +225,11 @@ export function SubjectsClient() {
     if (claims?.organizationId) fetchData(claims.organizationId);
   }
 
+  const getGradeName = (gradeId: string) => {
+    const grade = grades.find(g => g.id === gradeId);
+    return grade ? `${grade.name} - ${grade.groupName}` : 'N/A';
+  }
+
   if (loading || !claims?.organizationId) {
     return <LoadingSpinner />;
   }
@@ -198,26 +237,33 @@ export function SubjectsClient() {
   return (
     <>
       <div className="flex justify-end mb-4">
-        <Button onClick={handleCreate}>
+        <Button onClick={handleCreate} disabled={grades.length === 0}>
           <PlusCircle className="mr-2 h-4 w-4" /> Create Subject
         </Button>
       </div>
+      {grades.length === 0 && (
+        <div className="text-center text-muted-foreground p-4 border-2 border-dashed rounded-lg">
+            Please create at least one Grade and Group before adding subjects.
+        </div>
+      )}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Description</TableHead>
+              <TableHead>Grade</TableHead>
               <TableHead>
                 <span className="sr-only">Actions</span>
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((subject) => (
+            {subjects.map((subject) => (
               <TableRow key={subject.id}>
                 <TableCell className="font-medium">{subject.name}</TableCell>
                 <TableCell>{subject.description}</TableCell>
+                <TableCell>{getGradeName(subject.gradeId || '')}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu onOpenChange={(isOpen) => setMenuOpen(isOpen ? subject.id : null)} open={isMenuOpen === subject.id}>
                     <DropdownMenuTrigger asChild>
@@ -249,10 +295,10 @@ export function SubjectsClient() {
             <DialogDescription>
               {currentSubject
                 ? "Make changes to the subject here. Click save when you're done."
-                : "Add a new subject to your institution."}
+                : "Add a new subject to your institution and assign it to a grade."}
             </DialogDescription>
           </DialogHeader>
-          <SubjectForm subject={currentSubject} organizationId={claims.organizationId} onClose={handleDialogClose} />
+          <SubjectForm subject={currentSubject} organizationId={claims.organizationId} grades={grades} onClose={handleDialogClose} />
         </DialogContent>
       </Dialog>
     </>

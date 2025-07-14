@@ -10,7 +10,6 @@ import {
   doc,
   getDoc,
   limit,
-  serverTimestamp,
 } from "firebase/firestore";
 import { db, functions } from "./firebase";
 import { httpsCallable } from "firebase/functions";
@@ -18,15 +17,13 @@ import { httpsCallable } from "firebase/functions";
 export type Organization = {
     id: string;
     name: string;
-    address: string;
-    phone: string;
+    admin: string; // admin user's name
+    adminId: string; // admin user's uid
+    adminPhotoUrl: string;
     email: string; // organization's email
-    nit: string;
-    dane: string;
     status: "Active" | "Suspended" | "In Arrears";
     createdAt: any; // Can be a server timestamp
     logoUrl?: string;
-    adminId: string;
     userLimit: number;
     userCount: number;
     dataConsumption: number; // in GB
@@ -60,6 +57,7 @@ export type Subject = {
     organizationId: string;
     name: string;
     description: string;
+    gradeId?: string;
 };
 
 
@@ -68,16 +66,13 @@ export async function getOrganizations(): Promise<Organization[]> {
   try {
     const getOrganizationsFunction = httpsCallable(functions, 'getOrganizations');
     const result = await getOrganizationsFunction();
-    // The callable function returns an object with a `data` property.
-    const data = result.data as Organization[];
-    return data;
+    return result.data as Organization[];
   } catch (error) {
     console.error('Error fetching organizations via function:', error);
     // Re-throw the error to be handled by the caller, e.g., React Query or a try/catch block in a component
     throw error;
   }
 }
-
 
 // Academic Periods
 export async function getAcademicPeriods(organizationId: string): Promise<AcademicPeriod[]> {
