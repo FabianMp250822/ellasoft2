@@ -28,7 +28,7 @@ export const createOrganization = functions.https.onRequest(
       const fields: Record<string, string> = {};
       const files: Record<
         string,
-        { buffer: Buffer; mimeType: string; fileName: string }
+        {buffer: Buffer; mimeType: string; fileName: string}
       > = {};
 
       bb.on(
@@ -68,7 +68,7 @@ export const createOrganization = functions.https.onRequest(
 
           // 2. Subir imágenes a Storage y obtener URLs
           const uploadFile = async (
-            fileData: { buffer: Buffer; mimeType: string; fileName: string },
+            fileData: {buffer: Buffer; mimeType: string; fileName: string},
             path: string
           ): Promise<string> => {
             if (!fileData) return "";
