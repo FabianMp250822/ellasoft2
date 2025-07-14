@@ -15,7 +15,7 @@ export const createGradingSystem = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "The function must be called while authenticated.");
   }
 
-  const { organizationId, name, description, scale } = request.data;
+  const {organizationId, name, description, scale} = request.data;
   const uid = request.auth.uid;
   const tokenOrgId = request.auth.token.organizationId;
 
@@ -44,7 +44,7 @@ export const createGradingSystem = onCall(async (request) => {
     const successMessage = `Successfully created grading system '${name}' with ID ${docRef.id} for organization ${organizationId}.`;
     logger.info(successMessage);
 
-    return { success: true, message: successMessage, systemId: docRef.id };
+    return {success: true, message: successMessage, systemId: docRef.id};
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     logger.error(`Error creating grading system for organization ${organizationId}:`, error);
