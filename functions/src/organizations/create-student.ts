@@ -72,9 +72,9 @@ export const createStudent = onCall(async (request) => {
     "gender", "address", "guardianName", "guardianPhone", "guardianEmail",
   ];
   for (const field of requiredFields) {
-      if (!request.data[field]) {
-          throw new HttpsError("invalid-argument", `Missing required field: ${field}.`);
-      }
+    if (!request.data[field]) {
+      throw new HttpsError("invalid-argument", `Missing required field: ${field}.`);
+    }
   }
 
 

@@ -35,9 +35,18 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import type { Student, Grade } from "@/lib/data";
 import Image from "next/image";
@@ -47,6 +56,8 @@ import { LoadingSpinner } from "@/components/loading-spinner";
 import { CreateStudentForm } from "./form";
 import { BulkUpload } from "./bulk-upload";
 
+const STUDENTS_PER_PAGE = 25;
+
 export function StudentsClient() {
   const [isDialogOpen, setDialogOpen] = React.useState(false);
   const { toast } = useToast();
@@ -55,6 +66,10 @@ export function StudentsClient() {
   const [students, setStudents] = React.useState<Student[]>([]);
   const [grades, setGrades] = React.useState<Grade[]>([]);
   const [loading, setLoading] = React.useState(true);
+
+  // State for filtering and pagination
+  const [selectedGrade, setSelectedGrade] = React.useState<string>("all");
+  const [currentPage, setCurrentPage] = React.useState(1);
 
   const fetchData = React.useCallback(async (orgId: string) => {
     setLoading(true);
@@ -95,6 +110,28 @@ export function StudentsClient() {
     return grade ? `${grade.name} - ${grade.groupName}` : 'N/A';
   }
 
+  // Memoized filtered students
+  const filteredStudents = React.useMemo(() => {
+    if (selectedGrade === "all") {
+      return students;
+    }
+    return students.filter(student => student.gradeId === selectedGrade);
+  }, [students, selectedGrade]);
+
+  // Memoized paginated students
+  const paginatedStudents = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * STUDENTS_PER_PAGE;
+    const endIndex = startIndex + STUDENTS_PER_PAGE;
+    return filteredStudents.slice(startIndex, endIndex);
+  }, [filteredStudents, currentPage]);
+
+  const totalPages = Math.ceil(filteredStudents.length / STUDENTS_PER_PAGE);
+
+  const handleGradeFilterChange = (value: string) => {
+    setSelectedGrade(value);
+    setCurrentPage(1); // Reset to first page on filter change
+  };
+
   if (loading || authLoading) {
     return <LoadingSpinner />;
   }
@@ -121,6 +158,22 @@ export function StudentsClient() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
+                    <div className="mb-4">
+                        <Label htmlFor="grade-filter">Filter by Grade</Label>
+                        <Select value={selectedGrade} onValueChange={handleGradeFilterChange}>
+                            <SelectTrigger id="grade-filter" className="w-full md:w-1/3">
+                                <SelectValue placeholder="Select a grade to filter..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Grades</SelectItem>
+                                {grades.map(grade => (
+                                <SelectItem key={grade.id} value={grade.id}>
+                                    {grade.name} - {grade.groupName}
+                                </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <div className="rounded-md border">
                         <Table>
                         <TableHeader>
@@ -133,7 +186,7 @@ export function StudentsClient() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {students.map((student) => (
+                            {paginatedStudents.map((student) => (
                             <TableRow key={student.uid}>
                                 <TableCell className="font-medium">
                                 <div className="flex items-center gap-3">
@@ -175,6 +228,32 @@ export function StudentsClient() {
                         </Table>
                     </div>
                 </CardContent>
+                <CardFooter>
+                  <div className="flex w-full items-center justify-between text-xs text-muted-foreground">
+                    <div>
+                      Showing {Math.min(filteredStudents.length, STUDENTS_PER_PAGE * currentPage)} of {filteredStudents.length} students.
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span>Page {currentPage} of {totalPages}</span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                        >
+                            Previous
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            disabled={currentPage === totalPages}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                  </div>
+                </CardFooter>
             </Card>
         </TabsContent>
         <TabsContent value="bulk">
