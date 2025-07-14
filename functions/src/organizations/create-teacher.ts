@@ -54,6 +54,11 @@ export const createTeacher = onCall(async (request) => {
   if (!organizationId || !firstName || !lastName || !email || !password || !phone || !photoDataUri || !assignedSubjects) {
     throw new HttpsError("invalid-argument", "Missing required fields.");
   }
+  
+  if (!Array.isArray(assignedSubjects)) {
+    throw new HttpsError("invalid-argument", "The 'assignedSubjects' field must be an array.");
+  }
+
 
   // 3. Security Check: Ensure the admin belongs to the organization they're trying to modify.
   if (organizationId !== tokenOrgId) {
