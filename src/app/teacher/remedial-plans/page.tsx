@@ -24,6 +24,7 @@ const initialState = {
   message: null,
   errors: null,
   data: null,
+  success: false,
 }
 
 const students = [
@@ -167,7 +168,7 @@ export default function RemedialPlansPage() {
                   </p>
                 </div>
               )}
-              {state.message && !state.data && (
+              {state.message && !state.success && (
                   <Alert variant="destructive" className="mt-4">
                     <AlertTitle>Error</AlertTitle>
                     <AlertDescription>{state.message}</AlertDescription>

@@ -1,3 +1,4 @@
+
 "use server"
 
 import { generateRemedialPlan } from "@/ai/flows/generate-remedial-plan"
@@ -23,6 +24,7 @@ export async function generatePlanAction(prevState: any, formData: FormData) {
       message: "Invalid form data",
       errors: validatedFields.error.flatten().fieldErrors,
       data: null,
+      success: false,
     }
   }
 
@@ -32,6 +34,7 @@ export async function generatePlanAction(prevState: any, formData: FormData) {
       message: "Remedial plan generated successfully.",
       errors: null,
       data: result,
+      success: true,
     }
   } catch (error) {
     console.error(error);
@@ -39,6 +42,7 @@ export async function generatePlanAction(prevState: any, formData: FormData) {
       message: "Failed to generate plan. Please try again.",
       errors: null,
       data: null,
+      success: false,
     }
   }
 }

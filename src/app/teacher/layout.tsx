@@ -117,7 +117,7 @@ export default function TeacherLayout({
               <BreadcrumbList>
                 <BreadcrumbItem>
                   <BreadcrumbLink asChild>
-                    <Link href="#">Dashboard</Link>
+                    <Link href="/teacher/dashboard">Dashboard</Link>
                   </BreadcrumbLink>
                 </BreadcrumbItem>
               </BreadcrumbList>

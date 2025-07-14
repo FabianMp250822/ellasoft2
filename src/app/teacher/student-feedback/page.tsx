@@ -23,6 +23,7 @@ const initialState = {
   message: null,
   errors: null,
   data: null,
+  success: false,
 }
 
 function SubmitButton() {
@@ -137,7 +138,7 @@ export default function StudentFeedbackPage() {
                   </p>
                 </div>
               )}
-              {state.message && !state.data && (
+              {state.message && !state.success && (
                   <Alert variant="destructive" className="mt-4">
                     <AlertTitle>Error</AlertTitle>
                     <AlertDescription>{state.message}</AlertDescription>

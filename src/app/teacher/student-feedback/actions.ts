@@ -20,6 +20,7 @@ export async function generateFeedbackAction(prevState: any, formData: FormData)
       message: "Invalid form data",
       errors: validatedFields.error.flatten().fieldErrors,
       data: null,
+      success: false,
     }
   }
   
@@ -34,6 +35,7 @@ export async function generateFeedbackAction(prevState: any, formData: FormData)
       message: "Student feedback generated successfully.",
       errors: null,
       data: result,
+      success: true,
     }
   } catch (error) {
     console.error(error);
@@ -41,6 +43,7 @@ export async function generateFeedbackAction(prevState: any, formData: FormData)
       message: "Failed to generate feedback. Please try again.",
       errors: null,
       data: null,
+      success: false,
     }
   }
 }
