@@ -24,7 +24,11 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
-export const functions = getFunctions(app);
+
+// Specify the region for the functions
+const functionsRegion = 'us-central1';
+export const functions = getFunctions(app, functionsRegion);
+
 
 // In a development environment, you might want to connect to emulators
 // if (process.env.NODE_ENV === 'development') {
