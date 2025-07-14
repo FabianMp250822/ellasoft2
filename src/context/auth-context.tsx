@@ -31,45 +31,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [claims, setClaims] = useState<Claims | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [initialAuthChecked, setInitialAuthChecked] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const tokenResult = await user.getIdTokenResult();
-        setUser(user);
-        setClaims(tokenResult.claims);
-        
-        // Redirect logic after login or on page refresh
-        const currentRole = claims?.superadmin ? 'superadmin' : claims?.admin ? 'admin' : claims?.teacher ? 'teacher' : claims?.student ? 'student' : null;
-        const newRole = tokenResult.claims.superadmin ? 'superadmin' : tokenResult.claims.admin ? 'admin' : tokenResult.claims.teacher ? 'teacher' : tokenResult.claims.student ? 'student' : null;
-        
-        if (pathname === '/' || (currentRole && !pathname.startsWith(`/${currentRole}`))) {
-            if (newRole) {
-                router.push(`/${newRole}/dashboard`);
+        try {
+          const tokenResult = await user.getIdTokenResult();
+          setUser(user);
+          setClaims(tokenResult.claims);
+          
+          // Redirect logic after login or on page refresh - only on initial check or login page
+          if (!initialAuthChecked || pathname === '/') {
+            const newRole = tokenResult.claims.superadmin 
+              ? 'superadmin' 
+              : tokenResult.claims.admin 
+              ? 'admin' 
+              : tokenResult.claims.teacher 
+              ? 'teacher' 
+              : tokenResult.claims.student 
+              ? 'student' 
+              : null;
+            
+            // Only redirect if we're on the login page and have a role
+            if (pathname === '/' && newRole) {
+              router.push(`/${newRole}/dashboard`);
             }
+          }
+        } catch (error) {
+          console.error('Error getting user token:', error);
+          setUser(null);
+          setClaims(null);
         }
-
       } else {
         setUser(null);
         setClaims(null);
+        // Only redirect to login if not already there and not initial load
+        if (initialAuthChecked && pathname !== '/') {
+          router.push('/');
+        }
       }
+      
       setLoading(false);
+      if (!initialAuthChecked) {
+        setInitialAuthChecked(true);
+      }
     });
 
     return () => unsubscribe();
-  }, [router, pathname, claims]);
+  }, [router, pathname, initialAuthChecked]);
 
   const login = async (email: string, pass: string) => {
     setLoading(true);
     setError(null);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-      // Redirection is handled by onAuthStateChanged
+      // Don't set loading to false here - onAuthStateChanged will handle it
     } catch (e: any) {
       setError(e.message || "Failed to sign in.");
-      setLoading(false);
+      setLoading(false); // Only set loading to false on error
     }
   };
 

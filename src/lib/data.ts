@@ -61,10 +61,16 @@ export type Subject = {
 
 // Organizations
 export async function getOrganizations(): Promise<Organization[]> {
-  const orgsCol = collection(db, "organizations");
-  const orgsSnapshot = await getDocs(orgsCol);
-  const orgsList = orgsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Organization));
-  return orgsList;
+  try {
+    const orgsCol = collection(db, "organizations");
+    const orgsSnapshot = await getDocs(orgsCol);
+    const orgsList = orgsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Organization));
+    return orgsList;
+  } catch (error) {
+    console.error('Error fetching organizations:', error);
+    // Return empty array instead of throwing to prevent crash
+    return [];
+  }
 }
 
 // Academic Periods
