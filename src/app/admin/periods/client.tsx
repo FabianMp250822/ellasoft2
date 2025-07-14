@@ -45,7 +45,7 @@ import { Input } from "@/components/ui/input";
 import type { AcademicPeriod } from "@/lib/data";
 import { useFormStatus } from "react-dom";
 import { useActionState } from "react";
-import { createPeriodAction, updatePeriodAction, deletePeriodAction } from "./actions";
+import { createPeriodAction, updatePeriodAction, deletePeriodAction, type ActionState } from "./actions";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { getAcademicPeriods } from "@/lib/data";
@@ -70,17 +70,17 @@ function PeriodForm({
   onClose: () => void;
 }) {
   const action = period ? updatePeriodAction : createPeriodAction;
-  const [state, dispatch] = useActionState(action, { message: null, errors: {} });
+  const [state, dispatch] = useActionState<ActionState, FormData>(action, { message: null, errors: {}, success: false });
   const { toast } = useToast();
 
   React.useEffect(() => {
     if (state.message) {
-        if (Object.keys(state.errors || {}).length > 0) {
-            toast({ title: "Error", description: state.message, variant: "destructive" });
-        } else {
-            toast({ title: "Success", description: state.message });
-            onClose();
-        }
+      if (state.success) {
+        toast({ title: "Success", description: state.message });
+        onClose();
+      } else {
+        toast({ title: "Error", description: state.message, variant: "destructive" });
+      }
     }
   }, [state, toast, onClose]);
 
@@ -131,13 +131,15 @@ function PeriodForm({
   );
 }
 
-function DeletePeriodDialog({ periodId, onDeleted }: { periodId: string, onDeleted: () => void }) {
+function DeletePeriodDialog({ periodId, organizationId, onDeleted }: { periodId: string, organizationId: string, onDeleted: () => void }) {
     const {toast} = useToast();
     const handleDelete = async () => {
-        const result = await deletePeriodAction(periodId);
-        if (result.message) {
+        const result = await deletePeriodAction(periodId, organizationId);
+        if (result.success) {
             toast({ title: "Success", description: result.message });
             onDeleted();
+        } else {
+            toast({ title: "Error", description: result.message, variant: "destructive" });
         }
     }
     return (
@@ -179,9 +181,12 @@ export function PeriodsClient() {
         try {
             const periods = await getAcademicPeriods(orgId);
             setData(periods);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to fetch academic periods:", error);
-            toast({ title: "Error", description: "Could not fetch academic periods.", variant: "destructive" });
+            const description = error.code === 'permission-denied' 
+                ? "You do not have permission to view academic periods."
+                : "Could not fetch academic periods.";
+            toast({ title: "Error", description, variant: "destructive" });
         } finally {
             setLoading(false);
         }
@@ -251,7 +256,7 @@ export function PeriodsClient() {
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                        <DeletePeriodDialog periodId={period.id} onDeleted={() => { setMenuOpen(null); if (claims?.organizationId) fetchData(claims.organizationId); }}/>
+                        <DeletePeriodDialog periodId={period.id} organizationId={claims.organizationId} onDeleted={() => { setMenuOpen(null); if (claims?.organizationId) fetchData(claims.organizationId); }}/>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

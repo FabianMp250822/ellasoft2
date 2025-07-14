@@ -1,56 +1,45 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper function to check if the user is a member of the organization
-    // by comparing the organizationId in their custom claims with the one in the document.
-    function isOrganizationMember(orgId) {
-      return request.auth.token.organizationId == orgId;
-    }
-    
-    // Helper function to check if the user is a superadmin.
+
+    // Helper functions
     function isSuperAdmin() {
-      return request.auth.token.superadmin == true;
+      return request.auth != null && request.auth.token.superadmin == true;
     }
 
-    // Organizations can be read by superadmins only.
-    match /organizations/{orgId} {
-      allow read, write: if isSuperAdmin();
+    function isOrganizationMember(orgId) {
+      return request.auth != null && request.auth.token.organizationId == orgId;
     }
     
-    // Rules for collections that belong to an organization.
-    // Users can read/write data only for their own organization.
+    // Superadmin can read/write anything
+    match /{document=**} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    // Organizations can only be read by superadmins (covered above).
+    // The getOrganizations callable function handles this securely.
+    match /organizations/{orgId} {
+      allow read, write: if false; // Block direct client access
+    }
+
+    // Rules for collections that belong to an organization
     match /academicPeriods/{docId} {
       allow read: if isOrganizationMember(resource.data.organizationId);
       allow write: if isOrganizationMember(request.resource.data.organizationId);
     }
-    
     match /gradingSystems/{docId} {
       allow read: if isOrganizationMember(resource.data.organizationId);
       allow write: if isOrganizationMember(request.resource.data.organizationId);
     }
-    
     match /grades/{docId} {
       allow read: if isOrganizationMember(resource.data.organizationId);
       allow write: if isOrganizationMember(request.resource.data.organizationId);
     }
-
     match /subjects/{docId} {
       allow read: if isOrganizationMember(resource.data.organizationId);
       allow write: if isOrganizationMember(request.resource.data.organizationId);
     }
-
-    // Add other organization-specific collections here following the same pattern.
-    // For example:
-    // match /teachers/{docId} {
-    //   allow read: if isOrganizationMember(resource.data.organizationId);
-    //   allow write: if isOrganizationMember(request.resource.data.organizationId);
-    // }
-    // match /students/{docId} {
-    //   allow read: if isOrganizationMember(resource.data.organizationId);
-    //   allow write: if isOrganizationMember(request.resource.data.organizationId);
-    // }
+    
   }
 }

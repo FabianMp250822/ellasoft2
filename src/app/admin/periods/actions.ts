@@ -19,22 +19,35 @@ const FormSchema = z.object({
 const CreatePeriod = FormSchema.omit({ id: true });
 const UpdatePeriod = FormSchema.omit({ organizationId: true });
 
-export async function createPeriodAction(prevState: any, formData: FormData) {
-  try {
-    const validatedFields = CreatePeriod.safeParse({
-        name: formData.get("name"),
-        startDate: formData.get("startDate"),
-        endDate: formData.get("endDate"),
-        organizationId: formData.get("organizationId"),
-    });
+export type ActionState = {
+  message?: string | null;
+  errors?: {
+    name?: string[];
+    startDate?: string[];
+    endDate?: string[];
+    organizationId?: string[];
+  } | null;
+  success?: boolean;
+};
 
-    if (!validatedFields.success) {
-        return {
+
+export async function createPeriodAction(prevState: ActionState, formData: FormData) {
+  const validatedFields = CreatePeriod.safeParse({
+      name: formData.get("name"),
+      startDate: formData.get("startDate"),
+      endDate: formData.get("endDate"),
+      organizationId: formData.get("organizationId"),
+  });
+
+  if (!validatedFields.success) {
+      return {
+        success: false,
         errors: validatedFields.error.flatten().fieldErrors,
         message: "Validation failed. Could not create period.",
-        };
-    }
+      };
+  }
 
+  try {
     const { organizationId, ...periodData } = validatedFields.data;
 
     await addAcademicPeriod(organizationId, {
@@ -44,46 +57,60 @@ export async function createPeriodAction(prevState: any, formData: FormData) {
     });
 
     revalidatePath("/admin/periods");
-    return { message: "Period created successfully." };
+    return { success: true, message: "Period created successfully." };
   } catch (e: any) {
-    return { message: e.message, errors: {} };
+    if (e.code === 'permission-denied') {
+        return { success: false, message: "Permission Denied: You do not have the required permissions to create a period." };
+    }
+    return { success: false, message: `An error occurred: ${e.message}` };
   }
 }
 
 export async function updatePeriodAction(prevState: any, formData: FormData) {
+    const validatedFields = UpdatePeriod.safeParse({
+        id: formData.get("id"),
+        name: formData.get("name"),
+        startDate: formData.get("startDate"),
+        endDate: formData.get("endDate"),
+    });
+
+    if (!validatedFields.success) {
+        return {
+          success: false,
+          errors: validatedFields.error.flatten().fieldErrors,
+          message: "Validation failed. Could not update period.",
+        };
+    }
+    
     try {
-        const validatedFields = UpdatePeriod.safeParse({
-            id: formData.get("id"),
-            name: formData.get("name"),
-            startDate: formData.get("startDate"),
-            endDate: formData.get("endDate"),
-        });
+      await updateAcademicPeriod(validatedFields.data.id, {
+          ...validatedFields.data,
+          startDate: new Date(validatedFields.data.startDate),
+          endDate: new Date(validatedFields.data.endDate),
+      });
 
-        if (!validatedFields.success) {
-            return {
-            errors: validatedFields.error.flatten().fieldErrors,
-            message: "Validation failed. Could not update period.",
-            };
-        }
-        
-        await updateAcademicPeriod(validatedFields.data.id, {
-            ...validatedFields.data,
-            startDate: new Date(validatedFields.data.startDate),
-            endDate: new Date(validatedFields.data.endDate),
-        });
-
-        revalidatePath("/admin/periods");
-        return { message: "Period updated successfully." };
+      revalidatePath("/admin/periods");
+      return { success: true, message: "Period updated successfully." };
     } catch (e: any) {
-        return { message: e.message, errors: {} };
+        if (e.code === 'permission-denied') {
+            return { success: false, message: "Permission Denied: You do not have the required permissions to update a period." };
+        }
+        return { success: false, message: `An error occurred: ${e.message}` };
     }
 }
 
-export async function deletePeriodAction(periodId: string) {
-    if (!periodId) {
-        return { message: "Period ID is required." };
+export async function deletePeriodAction(periodId: string, organizationId: string) {
+    if (!periodId || !organizationId) {
+        return { success: false, message: "Period ID and Organization ID are required." };
     }
-  await deleteAcademicPeriod(periodId);
-  revalidatePath("/admin/periods");
-  return { message: "Period deleted successfully." };
+    try {
+        await deleteAcademicPeriod(periodId);
+        revalidatePath("/admin/periods");
+        return { success: true, message: "Period deleted successfully." };
+    } catch (e: any) {
+         if (e.code === 'permission-denied') {
+            return { success: false, message: "Permission Denied: You do not have the required permissions to delete a period." };
+        }
+        return { success: false, message: `An error occurred: ${e.message}` };
+    }
 }
