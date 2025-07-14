@@ -75,7 +75,16 @@ function GeneratorForm({subjects, grades}: {subjects: Subject[], grades: Grade[]
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="subject">Subject</Label>
-            <Input id="subject" name="subject" placeholder="e.g., Mathematics, History" />
+            <Select name="subject">
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subjects.map((subject) => (
+                    <SelectItem key={subject.id} value={subject.name}>{subject.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             {state.errors?.subject && (
               <p className="text-sm font-medium text-destructive">
                 {state.errors.subject[0]}
@@ -90,7 +99,7 @@ function GeneratorForm({subjects, grades}: {subjects: Subject[], grades: Grade[]
                 </SelectTrigger>
                 <SelectContent>
                   {grades.map((grade) => (
-                    <SelectItem key={grade.id} value={`${grade.name} - ${grade.groupName}`}>{grade.name} - {grade.groupName}</SelectItem>
+                    <SelectItem key={grade.id} value={grade.name}>{grade.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
