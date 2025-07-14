@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -45,10 +46,12 @@ import { Input } from "@/components/ui/input";
 import type { AcademicPeriod } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
-import { getAcademicPeriods, deleteAcademicPeriod, updateAcademicPeriod } from "@/lib/data";
+import { getAcademicPeriods } from "@/lib/data";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "@/lib/firebase";
+
+const manageAcademicPeriodsFn = httpsCallable(functions, 'manageAcademicPeriods');
 
 function PeriodForm({
   period,
@@ -70,18 +73,12 @@ function PeriodForm({
     setSubmitting(true);
     
     try {
+        const data = { name, startDate, endDate };
         if (period) {
-            // Update logic
-            await updateAcademicPeriod(period.id, { name, startDate: new Date(startDate), endDate: new Date(endDate) });
+            await manageAcademicPeriodsFn({ action: 'update', periodId: period.id, organizationId, data });
             toast({ title: "Success", description: "Period updated successfully." });
         } else {
-            // Create logic
-            const createAcademicPeriodFn = httpsCallable(functions, 'createAcademicPeriod');
-            const result = await createAcademicPeriodFn({ organizationId, name, startDate, endDate });
-            const resultData = result.data as { success: boolean; message: string; };
-            if (!resultData.success) {
-                throw new Error(resultData.message || "Cloud function returned failure.");
-            }
+            await manageAcademicPeriodsFn({ action: 'create', organizationId, data });
             toast({ title: "Success", description: "Period created successfully." });
         }
         onClose();
@@ -128,11 +125,11 @@ function PeriodForm({
   );
 }
 
-function DeletePeriodDialog({ periodId, onDeleted }: { periodId: string, onDeleted: () => void }) {
+function DeletePeriodDialog({ period, organizationId, onDeleted }: { period: AcademicPeriod, organizationId: string, onDeleted: () => void }) {
     const {toast} = useToast();
     const handleDelete = async () => {
         try {
-            await deleteAcademicPeriod(periodId);
+            await manageAcademicPeriodsFn({ action: 'delete', periodId: period.id, organizationId });
             toast({ title: "Success", description: "Period deleted successfully." });
             onDeleted();
         } catch (e: any) {
@@ -254,7 +251,7 @@ export function PeriodsClient() {
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                        <DeletePeriodDialog periodId={period.id} onDeleted={() => { setMenuOpen(null); if (claims?.organizationId) fetchData(claims.organizationId); }}/>
+                        <DeletePeriodDialog period={period} organizationId={claims.organizationId} onDeleted={() => { setMenuOpen(null); if (claims?.organizationId) fetchData(claims.organizationId); }}/>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

@@ -1,11 +1,10 @@
+
 // This file contains functions to fetch data from Firestore.
 import {
   collection,
   query,
   where,
   getDocs,
-  updateDoc,
-  deleteDoc,
   doc,
   limit,
 } from "firebase/firestore";
@@ -173,17 +172,6 @@ export async function getAcademicPeriods(organizationId: string): Promise<Academ
     return periodsList;
 }
 
-export async function deleteAcademicPeriod(id: string) {
-    const periodDoc = doc(db, "academicPeriods", id);
-    await deleteDoc(periodDoc);
-}
-
-export async function updateAcademicPeriod(id: string, period: Partial<Omit<AcademicPeriod, 'id' | 'organizationId'>>) {
-    const periodDoc = doc(db, "academicPeriods", id);
-    await updateDoc(periodDoc, period);
-}
-
-
 // Grading Systems
 export async function getGradingSystems(organizationId: string): Promise<GradingSystem[]> {
     const systemsCol = collection(db, "gradingSystems");
@@ -191,17 +179,6 @@ export async function getGradingSystems(organizationId: string): Promise<Grading
     const systemsSnapshot = await getDocs(q);
     return systemsSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as GradingSystem));
 }
-
-export async function deleteGradingSystem(id: string) {
-    const systemDoc = doc(db, "gradingSystems", id);
-    await deleteDoc(systemDoc);
-}
-
-export async function updateGradingSystem(id: string, system: Partial<Omit<GradingSystem, 'id' | 'organizationId'>>) {
-    const systemDoc = doc(db, "gradingSystems", id);
-    await updateDoc(systemDoc, system);
-}
-
 
 // Grades
 export async function getGrades(organizationId: string): Promise<Grade[]> {
@@ -211,33 +188,12 @@ export async function getGrades(organizationId: string): Promise<Grade[]> {
     return gradesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Grade));
 }
 
-export async function deleteGrade(id: string) {
-    const gradeDoc = doc(db, "grades", id);
-    await deleteDoc(gradeDoc);
-}
-
-export async function updateGrade(id: string, grade: Partial<Omit<Grade, 'id' | 'organizationId'>>) {
-    const gradeDoc = doc(db, "grades", id);
-    await updateDoc(gradeDoc, grade);
-}
-
-
 // Subjects
 export async function getSubjects(organizationId: string): Promise<Subject[]> {
     const subjectsCol = collection(db, "subjects");
     const q = query(subjectsCol, where("organizationId", "==", organizationId));
     const subjectsSnapshot = await getDocs(q);
     return subjectsSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Subject));
-}
-
-export async function deleteSubject(id: string) {
-    const subjectDoc = doc(db, "subjects", id);
-    await deleteDoc(subjectDoc);
-}
-
-export async function updateSubject(id: string, subject: Partial<Omit<Subject, 'id' | 'organizationId'>>) {
-    const subjectDoc = doc(db, "subjects", id);
-    await updateDoc(subjectDoc, subject);
 }
 
 

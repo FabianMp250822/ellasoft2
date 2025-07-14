@@ -53,10 +53,12 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Subject, Grade } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
-import { getSubjects, updateSubject, deleteSubject, getGrades } from "@/lib/data";
+import { getSubjects, getGrades } from "@/lib/data";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "@/lib/firebase";
+
+const manageSubjectsFn = httpsCallable(functions, 'manageSubjects');
 
 function SubjectForm({
   subject,
@@ -83,12 +85,12 @@ function SubjectForm({
     }
     setSubmitting(true);
     try {
+        const data = { name, description, gradeId };
         if (subject) {
-            await updateSubject(subject.id, { name, description, gradeId });
+            await manageSubjectsFn({ action: 'update', subjectId: subject.id, organizationId, data });
             toast({ title: "Success", description: "Subject updated successfully." });
         } else {
-            const createSubjectFn = httpsCallable(functions, 'createSubject');
-            await createSubjectFn({ organizationId, name, description, gradeId });
+            await manageSubjectsFn({ action: 'create', organizationId, data });
             toast({ title: "Success", description: "Subject created successfully." });
         }
         onClose();
@@ -144,11 +146,11 @@ function SubjectForm({
   );
 }
 
-function DeleteSubjectDialog({ subjectId, onDeleted }: { subjectId: string, onDeleted: () => void }) {
+function DeleteSubjectDialog({ subject, organizationId, onDeleted }: { subject: Subject, organizationId: string, onDeleted: () => void }) {
     const {toast} = useToast();
     const handleDelete = async () => {
         try {
-            await deleteSubject(subjectId);
+            await manageSubjectsFn({ action: 'delete', subjectId: subject.id, organizationId });
             toast({ title: "Success", description: "Subject deleted successfully." });
             onDeleted();
         } catch(e: any) {
@@ -282,7 +284,7 @@ export function SubjectsClient() {
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DeleteSubjectDialog subjectId={subject.id} onDeleted={() => { setMenuOpen(null); if (claims?.organizationId) fetchData(claims.organizationId);}} />
+                      <DeleteSubjectDialog subject={subject} organizationId={claims.organizationId} onDeleted={() => { setMenuOpen(null); if (claims?.organizationId) fetchData(claims.organizationId);}} />
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

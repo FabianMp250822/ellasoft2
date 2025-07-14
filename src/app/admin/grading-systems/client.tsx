@@ -47,10 +47,12 @@ import { Textarea } from "@/components/ui/textarea";
 import type { GradingSystem } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
-import { getGradingSystems, updateGradingSystem, deleteGradingSystem } from "@/lib/data";
+import { getGradingSystems } from "@/lib/data";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "@/lib/firebase";
+
+const manageGradingSystemsFn = httpsCallable(functions, 'manageGradingSystems');
 
 function GradingSystemForm({
   system,
@@ -71,12 +73,12 @@ function GradingSystemForm({
     e.preventDefault();
     setSubmitting(true);
     try {
+        const data = { name, description, scale };
         if (system) {
-            await updateGradingSystem(system.id, { name, description, scale });
+            await manageGradingSystemsFn({ action: 'update', systemId: system.id, organizationId, data });
             toast({ title: "Success", description: "Grading system updated successfully." });
         } else {
-            const createGradingSystemFn = httpsCallable(functions, 'createGradingSystem');
-            await createGradingSystemFn({ organizationId, name, description, scale });
+            await manageGradingSystemsFn({ action: 'create', organizationId, data });
             toast({ title: "Success", description: "Grading system created successfully." });
         }
         onClose();
@@ -142,11 +144,11 @@ function GradingSystemForm({
   );
 }
 
-function DeleteSystemDialog({ systemId, onDeleted }: { systemId: string, onDeleted: () => void }) {
+function DeleteSystemDialog({ system, organizationId, onDeleted }: { system: GradingSystem, organizationId: string, onDeleted: () => void }) {
     const {toast} = useToast();
     const handleDelete = async () => {
         try {
-            await deleteGradingSystem(systemId);
+            await manageGradingSystemsFn({ action: 'delete', systemId: system.id, organizationId });
             toast({ title: "Success", description: "Grading system deleted successfully." });
             onDeleted();
         } catch (e: any) {
@@ -267,7 +269,7 @@ export function GradingSystemsClient() {
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DeleteSystemDialog systemId={system.id} onDeleted={() => { setMenuOpen(null); if (claims?.organizationId) fetchData(claims.organizationId);}} />
+                      <DeleteSystemDialog system={system} organizationId={claims.organizationId} onDeleted={() => { setMenuOpen(null); if (claims?.organizationId) fetchData(claims.organizationId);}} />
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

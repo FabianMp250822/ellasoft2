@@ -45,11 +45,13 @@ import { Input } from "@/components/ui/input";
 import type { Grade } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
-import { getGrades, updateGrade, deleteGrade } from "@/lib/data";
+import { getGrades } from "@/lib/data";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "@/lib/firebase";
 
+
+const manageGradesFn = httpsCallable(functions, 'manageGrades');
 
 function GradeForm({
   grade,
@@ -70,11 +72,10 @@ function GradeForm({
         setSubmitting(true);
         try {
             if (grade) {
-                await updateGrade(grade.id, { name, groupName });
+                await manageGradesFn({ action: 'update', gradeId: grade.id, organizationId, data: { name, groupName } });
                 toast({ title: "Success", description: "Grade updated successfully." });
             } else {
-                const createGradeFn = httpsCallable(functions, 'createGrade');
-                await createGradeFn({ organizationId, name, groupName });
+                await manageGradesFn({ action: 'create', organizationId, data: { name, groupName } });
                 toast({ title: "Success", description: "Grade created successfully." });
             }
             onClose();
@@ -115,11 +116,11 @@ function GradeForm({
   );
 }
 
-function DeleteGradeDialog({ gradeId, onDeleted }: { gradeId: string, onDeleted: () => void }) {
+function DeleteGradeDialog({ grade, organizationId, onDeleted }: { grade: Grade, organizationId: string, onDeleted: () => void }) {
     const {toast} = useToast();
     const handleDelete = async () => {
         try {
-            await deleteGrade(gradeId);
+            await manageGradesFn({ action: 'delete', gradeId: grade.id, organizationId });
             toast({ title: "Success", description: "Grade deleted successfully." });
             onDeleted();
         } catch(e: any) {
@@ -236,7 +237,7 @@ export function GradesClient() {
                         Edit
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DeleteGradeDialog gradeId={grade.id} onDeleted={() => { setMenuOpen(null); if (claims?.organizationId) fetchData(claims.organizationId); }}/>
+                        <DeleteGradeDialog grade={grade} organizationId={claims.organizationId} onDeleted={() => { setMenuOpen(null); if (claims?.organizationId) fetchData(claims.organizationId); }}/>
                     </DropdownMenuContent>
                     </DropdownMenu>
                 </TableCell>
