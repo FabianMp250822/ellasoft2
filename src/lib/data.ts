@@ -63,7 +63,7 @@ export type Subject = {
 // Organizations
 export async function getOrganizations(): Promise<Organization[]> {
   try {
-    const getOrganizationsFunction = httpsCallable(functions, 'default-getOrganizations');
+    const getOrganizationsFunction = httpsCallable(functions, 'getOrganizations');
     const result = await getOrganizationsFunction();
     return result.data as Organization[];
   } catch (error) {
