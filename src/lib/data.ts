@@ -11,7 +11,7 @@ import {
   getDoc,
   limit,
 } from "firebase/firestore";
-import { db, functions, auth } from "./firebase"; 
+import { db, functions } from "./firebase"; 
 import { httpsCallable } from "firebase/functions";
 
 export type Organization = {
@@ -22,7 +22,7 @@ export type Organization = {
     adminPhotoUrl: string;
     email: string; // organization's email
     status: "Active" | "Suspended" | "In Arrears";
-    createdAt: string;
+    createdAt: any; // Can be a server timestamp
     logoUrl?: string;
     userLimit: number;
     userCount: number;
@@ -63,14 +63,13 @@ export type Subject = {
 // Organizations
 export async function getOrganizations(): Promise<Organization[]> {
   try {
-    // When calling a function from a non-default codebase, you must use the name 'codebase-functionName'
-    const getOrganizationsFunction = httpsCallable(functions, 'academic-getOrganizations');
+    const getOrganizationsFunction = httpsCallable(functions, 'default-getOrganizations');
     const result = await getOrganizationsFunction();
-    // The result.data is already the array of organizations
     return result.data as Organization[];
   } catch (error) {
     console.error('Error fetching organizations via function:', error);
-    return [];
+    // Re-throw the error to be handled by the caller, e.g., React Query or a try/catch block in a component
+    throw error;
   }
 }
 

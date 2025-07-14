@@ -7,7 +7,7 @@ import { FormValues } from "./client";
 
 export async function createOrganizationAction(data: FormValues & { logoBase64: string; adminPhotoBase64: string; }) {
   try {
-    const createOrganizationFunction = httpsCallable(functions, 'createOrganization');
+    const createOrganizationFunction = httpsCallable(functions, 'default-createOrganization');
     await createOrganizationFunction(data);
     
     revalidatePath("/superadmin/dashboard");
@@ -22,7 +22,7 @@ export async function createOrganizationAction(data: FormValues & { logoBase64: 
 
 export async function setOrganizationStatusAction(orgId: string, status: 'Active' | 'Suspended' | 'In Arrears') {
   try {
-    const setStatusFunction = httpsCallable(functions, 'setOrganizationStatus');
+    const setStatusFunction = httpsCallable(functions, 'default-setOrganizationStatus');
     await setStatusFunction({ organizationId: orgId, status: status });
     
     revalidatePath("/superadmin/dashboard");

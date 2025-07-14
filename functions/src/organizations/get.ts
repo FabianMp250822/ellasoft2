@@ -24,7 +24,7 @@ export const getOrganizations = onCall(async (request) => {
       ...doc.data(),
     }));
 
-     logger.info(`Successfully fetched ${organizations.length} organizations.`);
+    logger.info(`Successfully fetched ${organizations.length} organizations.`);
     return organizations;
   } catch (error) {
     logger.error("Error fetching organizations:", error);
