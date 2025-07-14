@@ -1,6 +1,6 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import * as cors from "cors";
+import cors from "cors";
 import busboy from "busboy";
 
 const corsHandler = cors({origin: true});
@@ -34,11 +34,11 @@ export const createOrganization = functions.https.onRequest((req, res) => {
 
     const fields: {[key: string]: string} = {};
     const fileUploads: {
-        [key: string]: {
-            promise: Promise<string>,
-            filename: string,
-            mimetype: string,
-        }
+      [key: string]: {
+        promise: Promise<string>;
+        filename: string;
+        mimetype: string;
+      };
     } = {};
 
     bb.on("field", (fieldname, val) => {
@@ -114,8 +114,8 @@ export const createOrganization = functions.https.onRequest((req, res) => {
         console.error("Error creating organization:", error);
         const message =
           error instanceof Error ?
-          error.message :
-          "An unknown error occurred.";
+            error.message :
+            "An unknown error occurred.";
         res.status(500).json({
           error: "Failed to create organization.",
           details: message,

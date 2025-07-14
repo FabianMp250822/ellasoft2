@@ -17,11 +17,13 @@ export const setSuperAdminClaim = onRequest(async (request, response) => {
     logger.info(
       `Successfully set superadmin claim for user: ${email} (UID: ${uid})`
     );
-    response.status(200)
-      .send(`Successfully set superadmin claim for user: ${email}`);
+    response.status(200).send(
+        `Successfully set superadmin claim for user: ${email}`
+    );
   } catch (error) {
     logger.error(`Error setting superadmin claim for user: ${uid}`, error);
-    response.status(500)
-      .send("Error setting superadmin claim. Check logs for details.");
+    response.status(500).send(
+        "Error setting superadmin claim. Check logs for details."
+    );
   }
 });
