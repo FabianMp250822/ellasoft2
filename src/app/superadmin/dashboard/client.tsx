@@ -1,25 +1,11 @@
 "use client";
 
 import * as React from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Ban, PlayCircle } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { getOrganizations } from "@/lib/data";
+import { useAuth } from "@/context/auth-context";
+import { useToast } from "@/hooks/use-toast";
+import type { Organization } from "@/lib/data";
+import { LoadingSpinner } from "@/components/loading-spinner";
 import {
   Card,
   CardContent,
@@ -27,122 +13,137 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import type { Organization } from "@/lib/data";
-import Image from "next/image";
-import { setOrganizationStatusAction } from "../organizations/actions";
+import { OrganizationsChart } from "./chart";
+import { OrganizationsClient as OrganizationsTable } from "./client-table";
+import { generatePlatformSummary } from "@/ai/flows/generate-platform-summary";
 
-
-export function OrganizationsClient({ data: initialData }: { data: Organization[] }) {
+export function SuperadminDashboardClient() {
+  const { user, loading: authLoading } = useAuth();
+  const [organizations, setOrganizations] = React.useState<Organization[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [summary, setSummary] = React.useState<string | null>(null);
+  const [summaryLoading, setSummaryLoading] = React.useState(false);
   const { toast } = useToast();
-  const [organizations, setOrganizations] = React.useState(initialData);
+
+  const fetchOrgs = React.useCallback(async () => {
+    if (!user) return;
+    try {
+      setLoading(true);
+      const orgs = await getOrganizations();
+      setOrganizations(orgs);
+    } catch (error) {
+      console.error("Failed to fetch organizations:", error);
+      toast({
+        title: "Error",
+        description: "Could not fetch organizations.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [user, toast]);
 
   React.useEffect(() => {
-    setOrganizations(initialData);
-  }, [initialData]);
-
-  const handleStatusChange = async (orgId: string, currentStatus: Organization["status"]) => {
-    const newStatus = currentStatus === "Active" ? "Suspended" : "Active";
-    const result = await setOrganizationStatusAction(orgId, newStatus);
-    if (result.success) {
-      toast({ title: "Success", description: result.message });
-      // Optimistically update UI or refetch
-      setOrganizations(prevOrgs => prevOrgs.map(org => org.id === orgId ? {...org, status: newStatus} : org));
-    } else {
-      toast({ title: "Error", description: String(result.message), variant: "destructive" });
+    fetchOrgs();
+  }, [fetchOrgs]);
+  
+  React.useEffect(() => {
+    if (organizations.length > 0) {
+      setSummaryLoading(true);
+      generatePlatformSummary({ organizations })
+        .then(result => setSummary(result.analysis))
+        .catch(error => {
+            console.error("Failed to generate summary:", error);
+            toast({ title: "AI Summary Error", description: "Could not generate platform summary.", variant: "destructive" });
+        })
+        .finally(() => setSummaryLoading(false));
     }
+  }, [organizations, toast]);
+
+  if (loading || authLoading) {
+    return <LoadingSpinner />;
   }
+  
+  const totalUsers = organizations.reduce((acc, org) => acc + (org.userCount || 0), 0);
+  const totalData = organizations.reduce((acc, org) => acc + (org.dataConsumption || 0), 0);
+  const activeOrgs = organizations.filter(org => org.status === 'Active').length;
 
   return (
-      <Card>
-        <CardHeader>
-            <CardTitle className="font-headline">Tenant Institutions Overview</CardTitle>
-            <CardDescription>
-            A summary of all organizations currently using EduAI.
-            </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Organization</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Users</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>
-                  <span className="sr-only">Actions</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {organizations.map((org) => (
-                <TableRow key={org.id}>
-                  <TableCell className="font-medium">
-                     <div className="flex items-center gap-3">
-                        {org.logoUrl && (
-                        <Image
-                            src={org.logoUrl}
-                            alt={org.name}
-                            width={32}
-                            height={32}
-                            className="rounded-md"
-                            data-ai-hint="logo"
-                        />
-                        )}
-                        <div className="flex flex-col">
-                           <span className="font-semibold">{org.name}</span>
-                           <span className="text-xs text-muted-foreground">{org.email}</span>
-                        </div>
+    <div className="space-y-8">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Organizations
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{organizations.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {activeOrgs} active institutions
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Users
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalUsers}</div>
+            <p className="text-xs text-muted-foreground">
+              Across all institutions
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Data Consumption</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalData.toFixed(2)} GB</div>
+            <p className="text-xs text-muted-foreground">
+              Total platform storage usage
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+       <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
+        <Card className="lg:col-span-3">
+            <CardHeader>
+                <CardTitle className="font-headline">Platform Usage</CardTitle>
+                <CardDescription>User distribution across institutions.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <OrganizationsChart data={organizations}/>
+            </CardContent>
+        </Card>
+        <Card className="lg:col-span-2">
+             <CardHeader>
+                <CardTitle className="font-headline">AI-Powered Analysis</CardTitle>
+                <CardDescription>An intelligent summary of the platform's state.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {summaryLoading ? (
+                    <div className="flex items-center justify-center h-48">
+                        <LoadingSpinner />
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={org.status === "Active" ? "default" : "destructive"}
-                    >
-                      {org.status}
-                    </Badge>
-                  </TableCell>
-                   <TableCell>
-                    <div className="font-medium">{org.userCount || 0} / {org.userLimit}</div>
-                  </TableCell>
-                   <TableCell>
-                    <div className="font-medium">{(org.dataConsumption || 0).toFixed(2)} GB</div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          aria-haspopup="true"
-                          size="icon"
-                          variant="ghost"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuSeparator/>
-                        {org.status === 'Active' ? (
-                            <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={() => handleStatusChange(org.id, org.status)}>
-                                <Ban className="mr-2 h-4 w-4"/>
-                                Suspend
-                            </DropdownMenuItem>
-                        ) : (
-                            <DropdownMenuItem className="text-green-600 focus:bg-green-100 focus:text-green-700" onClick={() => handleStatusChange(org.id, org.status)}>
-                                <PlayCircle className="mr-2 h-4 w-4"/>
-                                Reactivate
-                            </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                ) : summary ? (
+                    <div className="text-sm text-muted-foreground space-y-2">
+                        {summary.split('\n').map((line, index) => (
+                           <p key={index}>{line}</p>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-muted-foreground">No summary available.</p>
+                )}
+            </CardContent>
+        </Card>
+      </div>
+      
+      <OrganizationsTable data={organizations} />
+    </div>
   );
 }
