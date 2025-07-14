@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useActionState, useEffect, useState } from "react"
+import React, { useActionState, useEffect, useState, useRef } from "react"
 import { useFormStatus } from "react-dom"
 import {
   Card,
@@ -20,7 +20,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { List, Loader2, Sparkles, BookOpen } from "lucide-react"
 import {
   Select,
@@ -30,10 +29,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useAuth } from "@/context/auth-context"
-import { getSubjects, getGrades, getPerformanceIndicatorsBySubject } from "@/lib/data"
-import type { Subject, Grade, PerformanceIndicator } from "@/lib/data"
+import { getSubjects, getGrades, getPerformanceIndicatorsBySubject, PerformanceIndicator } from "@/lib/data"
+import type { Subject, Grade } from "@/lib/data"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { useToast } from "@/hooks/use-toast"
+import { httpsCallable } from "firebase/functions"
+import { functions } from "@/lib/firebase"
 
 
 const initialState = {
@@ -60,22 +61,62 @@ function SubmitButton() {
   )
 }
 
-function GeneratorForm({subjects, grades, organizationId}: {subjects: Subject[], grades: Grade[], organizationId: string}) {
+function GeneratorForm({subjects, grades, organizationId, onGenerationSuccess}: {subjects: Subject[], grades: Grade[], organizationId: string, onGenerationSuccess: () => void}) {
   const [state, formAction] = useActionState(generateIndicatorsAction, initialState)
   const { toast } = useToast()
   
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [selectedGrade, setSelectedGrade] = useState<Grade | null>(null);
 
+  // Ref to track if save has been triggered for the current state.data
+  const saveTriggeredRef = useRef(false);
+
   useEffect(() => {
+    // Show toast message from server action
     if (state.message) {
       toast({
-        title: state.success ? "Success" : "Error",
+        title: state.success ? "In Progress" : "Error",
         description: state.message,
         variant: state.success ? "default" : "destructive",
       });
     }
-  }, [state, toast]);
+
+    // If generation was successful, trigger the save from the client
+    if (state.success && state.data && !saveTriggeredRef.current) {
+      saveTriggeredRef.current = true; // Mark as triggered to prevent re-runs
+      const saveData = async () => {
+        try {
+          const saveIndicatorsFn = httpsCallable(functions, 'savePerformanceIndicators');
+          await saveIndicatorsFn({
+            organizationId: state.data.organizationId,
+            subjectId: state.data.subjectId,
+            gradeId: state.data.gradeId,
+            indicators: state.data.indicators,
+          });
+          toast({
+            title: "Success",
+            description: "Indicators saved successfully.",
+            variant: "default",
+          });
+          onGenerationSuccess(); // Callback to refetch saved indicators
+        } catch (error: any) {
+          console.error("Error saving indicators:", error);
+          toast({
+            title: "Save Failed",
+            description: error.message || "Could not save indicators to the database.",
+            variant: "destructive",
+          });
+        }
+      };
+      saveData();
+    }
+
+     // Reset the save trigger ref when the form state is reset (e.g., new submission)
+    if (!state.success && !state.errors) {
+       saveTriggeredRef.current = false;
+    }
+
+  }, [state, toast, onGenerationSuccess]);
 
   const handleSubjectChange = (subjectId: string) => {
     const subject = subjects.find(s => s.id === subjectId) || null;
@@ -102,7 +143,7 @@ function GeneratorForm({subjects, grades, organizationId}: {subjects: Subject[],
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="subjectId">Subject</Label>
-            <Select name="subjectId" onValueChange={handleSubjectChange}>
+            <Select name="subjectId" onValueChange={handleSubjectChange} required>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a subject" />
                 </SelectTrigger>
@@ -120,7 +161,7 @@ function GeneratorForm({subjects, grades, organizationId}: {subjects: Subject[],
           </div>
           <div className="space-y-2">
             <Label htmlFor="gradeId">Grade Level</Label>
-             <Select name="gradeId" onValueChange={handleGradeChange}>
+             <Select name="gradeId" onValueChange={handleGradeChange} required>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a grade" />
                 </SelectTrigger>
@@ -145,7 +186,7 @@ function GeneratorForm({subjects, grades, organizationId}: {subjects: Subject[],
   )
 }
 
-function SavedIndicators({ subjectId }: { subjectId: string }) {
+function SavedIndicators({ subjectId, refreshKey }: { subjectId: string, refreshKey: number }) {
     const [indicators, setIndicators] = useState<PerformanceIndicator[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -171,7 +212,7 @@ function SavedIndicators({ subjectId }: { subjectId: string }) {
             }
         }
         fetchIndicators();
-    }, [subjectId]);
+    }, [subjectId, refreshKey]);
 
     if (!subjectId) {
         return (
@@ -236,6 +277,7 @@ export default function PerformanceIndicatorsPage() {
     const [grades, setGrades] = useState<Grade[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
+    const [refreshKey, setRefreshKey] = useState(0);
 
     useEffect(() => {
         async function fetchData() {
@@ -246,7 +288,7 @@ export default function PerformanceIndicatorsPage() {
                         getGrades(claims.organizationId)
                     ]);
                     setSubjects(subjectsData);
-                    setGrades(gradesData.filter((g, i, self) => self.findIndex(s => s.name === g.name) === i));
+                    setGrades(gradesData);
                 } catch (error) {
                     console.error("Failed to fetch initial data", error);
                 } finally {
@@ -261,6 +303,10 @@ export default function PerformanceIndicatorsPage() {
         return <LoadingSpinner fullScreen />;
     }
 
+    const handleGenerationSuccess = () => {
+        setRefreshKey(oldKey => oldKey + 1);
+    }
+
   return (
     <div className="grid gap-8">
       <PageHeader
@@ -269,7 +315,12 @@ export default function PerformanceIndicatorsPage() {
       />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-1">
-            <GeneratorForm subjects={subjects} grades={grades} organizationId={claims.organizationId} />
+            <GeneratorForm
+              subjects={subjects}
+              grades={grades}
+              organizationId={claims.organizationId}
+              onGenerationSuccess={handleGenerationSuccess}
+            />
         </div>
 
         <div className="lg:col-span-2">
@@ -294,7 +345,7 @@ export default function PerformanceIndicatorsPage() {
                         </SelectContent>
                     </Select>
                 </div>
-                <SavedIndicators subjectId={selectedSubjectId} />
+                <SavedIndicators subjectId={selectedSubjectId} refreshKey={refreshKey} />
             </CardContent>
           </Card>
         </div>

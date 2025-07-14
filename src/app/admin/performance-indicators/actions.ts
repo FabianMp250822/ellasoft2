@@ -1,8 +1,6 @@
 "use server"
 
 import { generatePerformanceIndicators } from "@/ai/flows/generate-performance-indicators"
-import { httpsCallable } from "firebase/functions";
-import { functions } from "@/lib/firebase";
 import { z } from "zod"
 
 const FormSchema = z.object({
@@ -31,33 +29,27 @@ export async function generateIndicatorsAction(prevState: any, formData: FormDat
     }
   }
 
-  const { subjectId, gradeId, subjectName, gradeName, organizationId } = validatedFields.data
+  const { subjectName, gradeName } = validatedFields.data
 
   try {
     const result = await generatePerformanceIndicators({
       subject: subjectName,
       gradeLevel: gradeName,
     })
-    
-    // Save the result to Firestore via a secure Cloud Function
-    const saveIndicatorsFn = httpsCallable(functions, 'savePerformanceIndicators');
-    await saveIndicatorsFn({
-      organizationId,
-      subjectId,
-      gradeId,
-      indicators: result.indicators,
-    });
 
-
+    // The action now ONLY returns the generated data. Saving is handled by the client.
     return {
-      message: "Performance indicators generated and saved successfully.",
+      message: "Performance indicators generated successfully. Now saving...",
       errors: null,
-      data: result,
+      data: {
+        ...validatedFields.data, // Pass through the IDs needed for saving
+        ...result,
+      },
       success: true,
     }
   } catch (error: any) {
     console.error(error);
-    const errorMessage = error.message || "Failed to generate or save indicators. Please try again.";
+    const errorMessage = error.message || "Failed to generate indicators. Please try again.";
     return {
       message: errorMessage,
       errors: null,
