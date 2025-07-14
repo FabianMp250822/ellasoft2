@@ -77,8 +77,8 @@ service cloud.firestore {
     // SUPERADMIN-ONLY COLLECTIONS
 
     match /organizations/{orgId} {
-      // Superadmins can read, create, and update any organization document.
-      allow read, write: if isSuperAdmin();
+      allow read, list: if isSuperAdmin();
+      allow write: if isSuperAdmin();
     }
 
     match /users/{userId} {
