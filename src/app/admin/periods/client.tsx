@@ -128,7 +128,7 @@ function PeriodForm({
   );
 }
 
-function DeletePeriodDialog({ periodId, organizationId, onDeleted }: { periodId: string, organizationId: string, onDeleted: () => void }) {
+function DeletePeriodDialog({ periodId, onDeleted }: { periodId: string, onDeleted: () => void }) {
     const {toast} = useToast();
     const handleDelete = async () => {
         try {
@@ -254,7 +254,7 @@ export function PeriodsClient() {
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                        <DeletePeriodDialog periodId={period.id} organizationId={claims.organizationId} onDeleted={() => { setMenuOpen(null); if (claims?.organizationId) fetchData(claims.organizationId); }}/>
+                        <DeletePeriodDialog periodId={period.id} onDeleted={() => { setMenuOpen(null); if (claims?.organizationId) fetchData(claims.organizationId); }}/>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

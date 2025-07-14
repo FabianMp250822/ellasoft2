@@ -30,26 +30,22 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import type { Organization } from "@/lib/data";
 import Image from "next/image";
-import { setOrganizationStatusAction } from "../organizations/actions";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/lib/firebase";
 
 
-export function OrganizationsClient({ data: initialData }: { data: Organization[] }) {
+export function OrganizationsClient({ data: initialData, onDataChange }: { data: Organization[], onDataChange: () => void }) {
   const { toast } = useToast();
-  const [organizations, setOrganizations] = React.useState(initialData);
-
-  React.useEffect(() => {
-    setOrganizations(initialData);
-  }, [initialData]);
 
   const handleStatusChange = async (orgId: string, currentStatus: Organization["status"]) => {
     const newStatus = currentStatus === "Active" ? "Suspended" : "Active";
-    const result = await setOrganizationStatusAction(orgId, newStatus);
-    if (result.success) {
-      toast({ title: "Success", description: result.message });
-      // Optimistically update UI
-      setOrganizations(prevOrgs => prevOrgs.map(org => org.id === orgId ? {...org, status: newStatus} : org));
-    } else {
-      toast({ title: "Error", description: String(result.message), variant: "destructive" });
+    try {
+      const setStatusFunction = httpsCallable(functions, 'setOrganizationStatus');
+      await setStatusFunction({ organizationId: orgId, status: newStatus });
+      toast({ title: "Success", description: `Organization status changed to ${newStatus}` });
+      onDataChange(); // Notify parent to refetch data
+    } catch (error: any) {
+      toast({ title: "Error", description: String(error.message), variant: "destructive" });
     }
   }
 
@@ -75,7 +71,7 @@ export function OrganizationsClient({ data: initialData }: { data: Organization[
               </TableRow>
             </TableHeader>
             <TableBody>
-              {organizations.map((org) => (
+              {initialData.map((org) => (
                 <TableRow key={org.id}>
                   <TableCell className="font-medium">
                      <div className="flex items-center gap-3">

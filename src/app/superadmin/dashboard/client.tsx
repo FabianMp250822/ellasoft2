@@ -146,7 +146,7 @@ export function SuperadminDashboardClient() {
         </Card>
       </div>
       
-      <OrganizationsTable data={organizations} />
+      <OrganizationsTable data={organizations} onDataChange={fetchOrgs} />
     </div>
   );
 }

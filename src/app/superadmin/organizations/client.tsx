@@ -38,11 +38,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import type { Organization } from "@/lib/data";
 import Image from "next/image";
-import { setOrganizationStatusAction } from "./actions";
 import { getOrganizations } from "@/lib/data";
 import { useAuth } from "@/context/auth-context";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { CreateOrganizationForm } from "./form";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/lib/firebase";
 
 function OrganizationTable({
   organizations,
@@ -184,12 +185,13 @@ export function OrganizationsClient() {
   }, [user, fetchOrgs]);
 
   const handleStatusChange = async (orgId: string, newStatus: Organization['status']) => {
-    const result = await setOrganizationStatusAction(orgId, newStatus);
-    if (result.success) {
-      toast({ title: "Success", description: result.message });
-      fetchOrgs(); // Refetch to get the latest data
-    } else {
-      toast({ title: "Error", description: String(result.message), variant: "destructive" });
+    try {
+        const setStatusFunction = httpsCallable(functions, 'setOrganizationStatus');
+        await setStatusFunction({ organizationId: orgId, status: newStatus });
+        toast({ title: "Success", description: `Organization status changed to ${newStatus}` });
+        fetchOrgs(); // Refetch to get the latest data
+    } catch (error: any) {
+        toast({ title: "Error", description: String(error.message), variant: "destructive" });
     }
   }
 
