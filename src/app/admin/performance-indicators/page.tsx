@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useAuth } from "@/context/auth-context"
-import { getSubjects, getGrades, getPerformanceIndicatorsBySubject, PerformanceIndicator } from "@/lib/data"
+import { getSubjects, getGrades, getPerformanceIndicatorsByOrg, PerformanceIndicator } from "@/lib/data"
 import type { Subject, Grade } from "@/lib/data"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { useToast } from "@/hooks/use-toast"
@@ -186,33 +186,9 @@ function GeneratorForm({subjects, grades, organizationId, onGenerationSuccess}: 
   )
 }
 
-function SavedIndicators({ subjectId, refreshKey }: { subjectId: string, refreshKey: number }) {
-    const [indicators, setIndicators] = useState<PerformanceIndicator[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!subjectId) {
-            setIndicators([]);
-            setLoading(false);
-            return;
-        };
-
-        async function fetchIndicators() {
-            setLoading(true);
-            setError(null);
-            try {
-                const data = await getPerformanceIndicatorsBySubject(subjectId);
-                setIndicators(data);
-            } catch (err) {
-                console.error("Failed to fetch indicators", err);
-                setError("Could not load existing indicators.");
-            } finally {
-                setLoading(false);
-            }
-        }
-        fetchIndicators();
-    }, [subjectId, refreshKey]);
+function SavedIndicators({ allIndicators, subjectId }: { allIndicators: PerformanceIndicator[], subjectId: string }) {
+    
+    const filteredIndicators = allIndicators.filter(indicator => indicator.subjectId === subjectId);
 
     if (!subjectId) {
         return (
@@ -225,9 +201,7 @@ function SavedIndicators({ subjectId, refreshKey }: { subjectId: string, refresh
         )
     }
 
-    if (loading) return <div className="flex justify-center p-12"><LoadingSpinner/></div>
-    if (error) return <p className="text-destructive text-center p-12">{error}</p>
-    if (indicators.length === 0) {
+    if (filteredIndicators.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/50 p-12 text-center">
                 <BookOpen className="h-10 w-10 text-muted-foreground" />
@@ -240,7 +214,7 @@ function SavedIndicators({ subjectId, refreshKey }: { subjectId: string, refresh
 
     return (
         <Accordion type="multiple" className="w-full">
-            {indicators.map((indicatorSet) => (
+            {filteredIndicators.map((indicatorSet) => (
                 <AccordionItem key={indicatorSet.id} value={indicatorSet.id}>
                     <AccordionTrigger>Indicators created on {new Date(indicatorSet.createdAt.seconds * 1000).toLocaleDateString()}</AccordionTrigger>
                     <AccordionContent>
@@ -275,28 +249,35 @@ export default function PerformanceIndicatorsPage() {
     const { user, claims } = useAuth();
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [grades, setGrades] = useState<Grade[]>([]);
+    const [allIndicators, setAllIndicators] = useState<PerformanceIndicator[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
-    const [refreshKey, setRefreshKey] = useState(0);
+
+    const {toast} = useToast();
+
+    const fetchAllData = async (orgId: string) => {
+        setLoading(true);
+        try {
+            const [subjectsData, gradesData, indicatorsData] = await Promise.all([
+                getSubjects(orgId),
+                getGrades(orgId),
+                getPerformanceIndicatorsByOrg(orgId)
+            ]);
+            setSubjects(subjectsData);
+            setGrades(gradesData);
+            setAllIndicators(indicatorsData);
+        } catch (error) {
+            console.error("Failed to fetch initial data", error);
+            toast({title: "Error", description: "Could not fetch necessary data.", variant: "destructive"});
+        } finally {
+            setLoading(false);
+        }
+    }
 
     useEffect(() => {
-        async function fetchData() {
-            if (user && claims?.organizationId) {
-                try {
-                    const [subjectsData, gradesData] = await Promise.all([
-                        getSubjects(claims.organizationId),
-                        getGrades(claims.organizationId)
-                    ]);
-                    setSubjects(subjectsData);
-                    setGrades(gradesData);
-                } catch (error) {
-                    console.error("Failed to fetch initial data", error);
-                } finally {
-                    setLoading(false);
-                }
-            }
+        if (user && claims?.organizationId) {
+            fetchAllData(claims.organizationId);
         }
-        fetchData();
     }, [user, claims]);
 
     if (loading || !claims?.organizationId) {
@@ -304,7 +285,15 @@ export default function PerformanceIndicatorsPage() {
     }
 
     const handleGenerationSuccess = () => {
-        setRefreshKey(oldKey => oldKey + 1);
+        if(claims?.organizationId) {
+            // Just refetch the indicators, no need to refetch subjects/grades
+            getPerformanceIndicatorsByOrg(claims.organizationId)
+                .then(setAllIndicators)
+                .catch(err => {
+                    console.error("Failed to refetch indicators", err);
+                    toast({title: "Error", description: "Could not refresh indicators list.", variant: "destructive"});
+                });
+        }
     }
 
   return (
@@ -345,7 +334,7 @@ export default function PerformanceIndicatorsPage() {
                         </SelectContent>
                     </Select>
                 </div>
-                <SavedIndicators subjectId={selectedSubjectId} refreshKey={refreshKey} />
+                {loading ? <div className="flex justify-center p-12"><LoadingSpinner/></div> : <SavedIndicators allIndicators={allIndicators} subjectId={selectedSubjectId} />}
             </CardContent>
           </Card>
         </div>

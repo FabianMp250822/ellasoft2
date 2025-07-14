@@ -244,26 +244,21 @@ export async function deleteSubject(id: string) {
 
 
 // Performance Indicators
-export async function getPerformanceIndicatorsBySubject(subjectId: string): Promise<PerformanceIndicator[]> {
-    const indicatorsCol = collection(db, "performanceIndicators");
-    const q = query(indicatorsCol, where("subjectId", "==", subjectId));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as PerformanceIndicator));
+export async function getPerformanceIndicatorsByOrg(organizationId: string): Promise<PerformanceIndicator[]> {
+    try {
+        const getIndicatorsFunction = httpsCallable(functions, 'getPerformanceIndicatorsByOrg');
+        const result = await getIndicatorsFunction({ organizationId });
+        // Firestore timestamps need to be converted to Date objects
+        const data = result.data as any[];
+        return data.map(item => ({
+            ...item,
+            createdAt: item.createdAt ? new Date(item.createdAt._seconds * 1000) : new Date(),
+        })) as PerformanceIndicator[];
+    } catch (error) {
+        console.error('Error fetching performance indicators via function:', error);
+        throw error;
+    }
 }
-
-export async function addPerformanceIndicator(
-    organizationId: string,
-    indicatorData: Omit<PerformanceIndicator, 'id' | 'createdAt' | 'organizationId'>
-) {
-    const indicatorsCol = collection(db, "performanceIndicators");
-    const docRef = await addDoc(indicatorsCol, {
-        ...indicatorData,
-        organizationId,
-        createdAt: new Date(),
-    });
-    return { id: docRef.id, ...indicatorData };
-}
-
 
 
 // Admin Dashboard Setup Status
