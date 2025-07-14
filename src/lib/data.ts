@@ -63,18 +63,8 @@ export type Subject = {
 // Organizations
 export async function getOrganizations(): Promise<Organization[]> {
   try {
-    // Force token refresh before calling the function to ensure we have the latest claims
-    const user = auth.currentUser;
-    if (!user) {
-      console.error('No authenticated user found');
-      return [];
-    }
-    
-    // Force refresh the token to get the latest claims
-    await user.getIdToken(true);
-    
     // When calling a function from a non-default codebase, you must use the name 'codebase-functionName'
-    const getOrganizationsFunction = httpsCallable(functions, 'getOrganizations');
+    const getOrganizationsFunction = httpsCallable(functions, 'academic-getOrganizations');
     const result = await getOrganizationsFunction();
     // The result.data is already the array of organizations
     return result.data as Organization[];
