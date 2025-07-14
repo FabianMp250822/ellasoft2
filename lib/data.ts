@@ -4,14 +4,12 @@ import {
   query,
   where,
   getDocs,
-  addDoc,
   updateDoc,
   deleteDoc,
   doc,
-  getDoc,
   limit,
 } from "firebase/firestore";
-import { db, functions } from "./firebase"; 
+import { db, functions } from "./firebase";
 import { httpsCallable } from "firebase/functions";
 
 export type Organization = {
@@ -57,7 +55,93 @@ export type Subject = {
     organizationId: string;
     name: string;
     description: string;
+    gradeId?: string;
 };
+
+export type PerformanceIndicator = {
+    id: string;
+    organizationId: string;
+    subjectId: string;
+    gradeId: string;
+    indicators: {
+        bajo: string[];
+        basico: string[];
+        alto: string[];
+        superior: string[];
+    };
+    createdAt: any;
+};
+
+export type Teacher = {
+    uid: string;
+    organizationId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    photoUrl: string;
+    assignedSubjects: string[]; // Array of subject IDs
+    createdAt: any;
+};
+
+export type Student = {
+    id: string; // This should be the UID
+    uid: string;
+    organizationId: string;
+    // Personal Data
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    photoUrl: string;
+    documentType: string;
+    documentNumber: string;
+    dateOfBirth: string;
+    gender: string;
+    address: string;
+    // Academic Data
+    gradeId: string;
+    // Family Data
+    guardianName: string;
+    guardianPhone: string;
+    guardianEmail: string;
+    motherName?: string;
+    motherPhone?: string;
+    fatherName?: string;
+    fatherPhone?: string;
+    createdAt: any;
+}
+
+export type AcademicLoad = {
+    id: string;
+    organizationId: string;
+    teacherId: string;
+    subjectId: string;
+    gradeId: string;
+    academicPeriodId: string;
+    createdAt: any;
+};
+
+export type Activity = {
+    id: string;
+    loadId: string;
+    name: string;
+    percentage: number;
+};
+
+export type StudentGrade = {
+    id: string;
+    studentId: string;
+    activityId: string;
+    loadId: string;
+    score: number;
+};
+
+export type GradebookData = {
+    students: Student[];
+    activities: Activity[];
+    grades: StudentGrade[];
+}
 
 
 // Organizations
@@ -68,7 +152,6 @@ export async function getOrganizations(): Promise<Organization[]> {
     return result.data as Organization[];
   } catch (error) {
     console.error('Error fetching organizations via function:', error);
-    // Re-throw the error to be handled by the caller, e.g., React Query or a try/catch block in a component
     throw error;
   }
 }
@@ -90,20 +173,14 @@ export async function getAcademicPeriods(organizationId: string): Promise<Academ
     return periodsList;
 }
 
-export async function addAcademicPeriod(organizationId: string, period: Omit<AcademicPeriod, 'id' | 'organizationId'>) {
-    const periodsCol = collection(db, "academicPeriods");
-    const docRef = await addDoc(periodsCol, { organizationId, ...period });
-    return { id: docRef.id, organizationId, ...period };
+export async function deleteAcademicPeriod(id: string) {
+    const periodDoc = doc(db, "academicPeriods", id);
+    await deleteDoc(periodDoc);
 }
 
 export async function updateAcademicPeriod(id: string, period: Partial<Omit<AcademicPeriod, 'id' | 'organizationId'>>) {
     const periodDoc = doc(db, "academicPeriods", id);
     await updateDoc(periodDoc, period);
-}
-
-export async function deleteAcademicPeriod(id: string) {
-    const periodDoc = doc(db, "academicPeriods", id);
-    await deleteDoc(periodDoc);
 }
 
 
@@ -115,20 +192,14 @@ export async function getGradingSystems(organizationId: string): Promise<Grading
     return systemsSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as GradingSystem));
 }
 
-export async function addGradingSystem(organizationId: string, system: Omit<GradingSystem, 'id' | 'organizationId'>) {
-    const systemsCol = collection(db, "gradingSystems");
-    const docRef = await addDoc(systemsCol, { organizationId, ...system });
-    return { id: docRef.id, organizationId, ...system };
+export async function deleteGradingSystem(id: string) {
+    const systemDoc = doc(db, "gradingSystems", id);
+    await deleteDoc(systemDoc);
 }
 
 export async function updateGradingSystem(id: string, system: Partial<Omit<GradingSystem, 'id' | 'organizationId'>>) {
     const systemDoc = doc(db, "gradingSystems", id);
     await updateDoc(systemDoc, system);
-}
-
-export async function deleteGradingSystem(id: string) {
-    const systemDoc = doc(db, "gradingSystems", id);
-    await deleteDoc(systemDoc);
 }
 
 
@@ -140,20 +211,14 @@ export async function getGrades(organizationId: string): Promise<Grade[]> {
     return gradesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Grade));
 }
 
-export async function addGrade(organizationId: string, grade: Omit<Grade, 'id' | 'organizationId'>) {
-    const gradesCol = collection(db, "grades");
-    const docRef = await addDoc(gradesCol, { organizationId, ...grade });
-    return { id: docRef.id, organizationId, ...grade };
+export async function deleteGrade(id: string) {
+    const gradeDoc = doc(db, "grades", id);
+    await deleteDoc(gradeDoc);
 }
 
 export async function updateGrade(id: string, grade: Partial<Omit<Grade, 'id' | 'organizationId'>>) {
     const gradeDoc = doc(db, "grades", id);
     await updateDoc(gradeDoc, grade);
-}
-
-export async function deleteGrade(id: string) {
-    const gradeDoc = doc(db, "grades", id);
-    await deleteDoc(gradeDoc);
 }
 
 
@@ -165,10 +230,9 @@ export async function getSubjects(organizationId: string): Promise<Subject[]> {
     return subjectsSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Subject));
 }
 
-export async function addSubject(organizationId: string, subject: Omit<Subject, 'id' | 'organizationId'>) {
-    const subjectsCol = collection(db, "subjects");
-    const docRef = await addDoc(subjectsCol, { organizationId, ...subject });
-    return { id: docRef.id, organizationId, ...subject };
+export async function deleteSubject(id: string) {
+    const subjectDoc = doc(db, "subjects", id);
+    await deleteDoc(subjectDoc);
 }
 
 export async function updateSubject(id: string, subject: Partial<Omit<Subject, 'id' | 'organizationId'>>) {
@@ -176,9 +240,80 @@ export async function updateSubject(id: string, subject: Partial<Omit<Subject, '
     await updateDoc(subjectDoc, subject);
 }
 
-export async function deleteSubject(id: string) {
-    const subjectDoc = doc(db, "subjects", id);
-    await deleteDoc(subjectDoc);
+
+// Performance Indicators
+export async function getPerformanceIndicatorsByOrg(organizationId: string): Promise<PerformanceIndicator[]> {
+    try {
+        const getIndicatorsFunction = httpsCallable(functions, 'getPerformanceIndicatorsByOrg');
+        const result = await getIndicatorsFunction({ organizationId });
+        const data = result.data as any[];
+        return data.map(item => ({
+            ...item,
+            createdAt: item.createdAt ? new Date(item.createdAt._seconds * 1000) : new Date(),
+        })) as PerformanceIndicator[];
+    } catch (error) {
+        console.error('Error fetching performance indicators via function:', error);
+        throw error;
+    }
+}
+
+
+// Teachers
+export async function getTeachers(organizationId: string): Promise<Teacher[]> {
+    const teachersCol = collection(db, "teachers");
+    const q = query(teachersCol, where("organizationId", "==", organizationId));
+    const teachersSnapshot = await getDocs(q);
+    return teachersSnapshot.docs.map(d => d.data() as Teacher);
+}
+
+
+// Students
+export async function getStudents(organizationId: string): Promise<Student[]> {
+    const studentsCol = collection(db, "students");
+    const q = query(studentsCol, where("organizationId", "==", organizationId));
+    const studentsSnapshot = await getDocs(q);
+    return studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+}
+
+export async function getStudentsByGrade(gradeId: string): Promise<Student[]> {
+  try {
+    const getStudentsByGradeFn = httpsCallable(functions, 'getStudentsByGrade');
+    const result = await getStudentsByGradeFn({ gradeId });
+    return result.data as Student[];
+  } catch (error) {
+    console.error(`Error fetching students for grade ${gradeId} via function:`, error);
+    throw error;
+  }
+}
+
+
+// Academic Load
+export async function getAcademicLoads(organizationId: string): Promise<AcademicLoad[]> {
+    try {
+        const getLoadsFunction = httpsCallable(functions, 'getAcademicLoads');
+        const result = await getLoadsFunction({ organizationId });
+        return result.data as AcademicLoad[];
+    } catch (error) {
+        console.error('Error fetching academic loads via function:', error);
+        throw error;
+    }
+}
+
+export async function getTeacherAcademicLoads(): Promise<AcademicLoad[]> {
+    try {
+        // This function requires no parameters as it gets the teacher's identity from the auth context.
+        const getLoadsFunction = httpsCallable(functions, 'getTeacherAcademicLoads');
+        const result = await getLoadsFunction();
+        return result.data as AcademicLoad[];
+    } catch (error) {
+        console.error('Error fetching teacher academic loads via function:', error);
+        throw error;
+    }
+}
+
+export async function deleteAcademicLoad(id: string) {
+    const deleteLoadFunction = httpsCallable(functions, 'deleteAcademicLoad');
+    await deleteLoadFunction({ id });
 }
 
 
@@ -196,19 +331,17 @@ export async function getSetupStatus(organizationId: string) {
         gradingSystems,
         grades,
         subjects,
-        // indicators, // Assuming collections exist for these
-        // teachers,
-        // students,
-        // academicLoad
+        teachers,
+        students,
+        academicLoad,
     ] = await Promise.all([
         checkCollection("academicPeriods", organizationId),
         checkCollection("gradingSystems", organizationId),
         checkCollection("grades", organizationId),
         checkCollection("subjects", organizationId),
-        // checkCollection("performanceIndicators", organizationId),
-        // checkCollection("teachers", organizationId),
-        // checkCollection("students", organizationId),
-        // checkCollection("academicLoad", organizationId),
+        checkCollection("teachers", organizationId),
+        checkCollection("students", organizationId),
+        checkCollection("academicLoads", organizationId),
     ]);
 
     return {
@@ -216,9 +349,19 @@ export async function getSetupStatus(organizationId: string) {
       gradingSystems,
       grades,
       subjects,
-      indicators: false,
-      teachers: false,
-      students: false,
-      academicLoad: false,
+      teachers,
+      students,
+      academicLoad,
+      indicators: false, // This can be updated when indicators have a "completed" state
     };
 }
+
+
+// Gradebook
+export async function getGradebookData(loadId: string): Promise<GradebookData> {
+    const getGradebookDataFn = httpsCallable(functions, 'getGradebookData');
+    const result = await getGradebookDataFn({ loadId });
+    return result.data as GradebookData;
+}
+
+    

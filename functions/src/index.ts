@@ -23,3 +23,11 @@ export {createAcademicLoad} from "./organizations/create-academic-load";
 export {getAcademicLoads} from "./organizations/get-academic-loads";
 export {getTeacherAcademicLoads} from "./organizations/get-teacher-academic-loads";
 export {deleteAcademicLoad} from "./organizations/delete-academic-load";
+
+// Gradebook functions
+export {getGradebookData} from "./gradebook/get-gradebook-data";
+export {createOrUpdateActivity} from "./gradebook/create-or-update-activity";
+export {createOrUpdateStudentGrade} from "./gradebook/create-or-update-student-grade";
+export {deleteActivity} from "./gradebook/delete-activity";
+
+    
