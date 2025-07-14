@@ -2,6 +2,10 @@ import * as admin from "firebase-admin";
 
 admin.initializeApp();
 
-// All functions have been migrated to be client-side operations
-// governed by Firestore security rules.
-// This file is kept for firebase-admin initialization.
+// Auth functions
+export { setSuperAdminClaim } from "./users/set-super-admin-claim";
+
+// Organization functions
+export { createOrganization } from "./organizations/create";
+export { getOrganizations } from "./organizations/get";
+export { setOrganizationStatus } from "./organizations/set-status";

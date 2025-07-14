@@ -12,7 +12,8 @@ import {
   limit,
   serverTimestamp,
 } from "firebase/firestore";
-import { db } from "./firebase"; 
+import { db, functions } from "./firebase";
+import { httpsCallable } from "firebase/functions";
 
 export type Organization = {
     id: string;
@@ -64,34 +65,15 @@ export type Subject = {
 
 // Organizations
 export async function getOrganizations(): Promise<Organization[]> {
-  // Security for this is handled by Firestore rules, 
-  // ensuring only superadmins can list all organizations.
-  const orgsCollection = collection(db, "organizations");
-  const orgsSnapshot = await getDocs(orgsCollection);
-  const orgsList = orgsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Organization));
-  return orgsList;
-}
-
-export async function addOrganization(org: Omit<Organization, 'id' | 'createdAt' | 'adminId' | 'userCount' | 'dataConsumption' | 'logoUrl' >) {
-    // This function assumes the caller is a superadmin, enforced by Firestore rules.
-    // In a real app, you might create the admin user here via a callable function
-    // and then link the adminId. For now, we'll omit complex user creation.
-    const orgsCollection = collection(db, "organizations");
-    const newOrgData = {
-        ...org,
-        status: "Active" as const,
-        adminId: "placeholder_admin_id", // Placeholder
-        userCount: 1,
-        dataConsumption: 0,
-        createdAt: serverTimestamp(),
-    }
-    const docRef = await addDoc(orgsCollection, newOrgData);
-    return { id: docRef.id, ...newOrgData };
-}
-
-export async function setOrganizationStatus(orgId: string, status: Organization['status']) {
-    const orgDoc = doc(db, "organizations", orgId);
-    await updateDoc(orgDoc, { status });
+  try {
+    const getOrganizationsFunction = httpsCallable(functions, 'getOrganizations');
+    const result = await getOrganizationsFunction();
+    return result.data as Organization[];
+  } catch (error) {
+    console.error('Error fetching organizations via function:', error);
+    // Re-throw the error to be handled by the caller, e.g., React Query or a try/catch block in a component
+    throw error;
+  }
 }
 
 

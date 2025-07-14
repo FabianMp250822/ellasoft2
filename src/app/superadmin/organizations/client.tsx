@@ -34,15 +34,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
-import { useForm, SubmitHandler } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import type { Organization } from "@/lib/data";
 import Image from "next/image";
-import { createOrganizationAction, setOrganizationStatusAction } from "./actions";
+import { setOrganizationStatusAction } from "./actions";
 import { getOrganizations } from "@/lib/data";
 import { useAuth } from "@/context/auth-context";
 import { LoadingSpinner } from "@/components/loading-spinner";
-import { CreateOrganizationForm, FormValues } from "./form";
+import { CreateOrganizationForm } from "./form";
 
 function OrganizationTable({
   organizations,
@@ -77,7 +76,7 @@ function OrganizationTable({
                         alt={org.name}
                         width={32}
                         height={32}
-                        className="rounded-md"
+                        className="rounded-md object-cover"
                         data-ai-hint="logo"
                       />
                     )}
@@ -233,7 +232,7 @@ export function OrganizationsClient() {
       </Tabs>
 
       <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Create New Organization</DialogTitle>
             <DialogDescription>
