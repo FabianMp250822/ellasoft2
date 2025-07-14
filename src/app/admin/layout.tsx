@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link"
 import {
   Home,
@@ -9,6 +11,7 @@ import {
   CalendarDays,
   Scaling,
   FileClock,
+  ShieldCheck,
 } from "lucide-react"
 
 import {
@@ -24,13 +27,15 @@ import {
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { UserNav } from "@/components/user-nav"
 import { Icons } from "@/components/icons"
 import { Separator } from "@/components/ui/separator"
 import { Menu } from "lucide-react"
+import { useAuth } from "@/context/auth-context"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 const navItems = [
   { href: "/admin/dashboard", icon: Home, label: "Dashboard" },
@@ -52,6 +57,19 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
+  const { user, claims, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && (!user || !claims?.admin)) {
+      router.push('/');
+    }
+  }, [user, claims, loading, router]);
+
+  if (loading || !user || !claims?.admin) {
+    return <LoadingSpinner fullScreen />;
+  }
+
   return (
     <TooltipProvider>
       <div className="flex min-h-screen w-full flex-col bg-muted/40">

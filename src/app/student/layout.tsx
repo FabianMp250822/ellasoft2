@@ -1,10 +1,11 @@
+"use client";
+
 import Link from "next/link"
 import {
   Home,
   User,
   Menu,
 } from "lucide-react"
-
 import {
   Tooltip,
   TooltipContent,
@@ -18,11 +19,13 @@ import {
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { UserNav } from "@/components/user-nav"
 import { Icons } from "@/components/icons"
+import { useAuth } from "@/context/auth-context"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+import { LoadingSpinner } from "@/components/loading-spinner"
 
 const navItems = [
   { href: "/student/dashboard", icon: Home, label: "Dashboard" },
@@ -34,6 +37,19 @@ export default function StudentLayout({
 }: {
   children: React.ReactNode
 }) {
+  const { user, claims, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && (!user || !claims?.student)) {
+      router.push('/');
+    }
+  }, [user, claims, loading, router]);
+
+  if (loading || !user || !claims?.student) {
+    return <LoadingSpinner fullScreen />;
+  }
+
   return (
     <TooltipProvider>
       <div className="flex min-h-screen w-full flex-col bg-muted/40">
