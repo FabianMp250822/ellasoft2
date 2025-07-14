@@ -48,9 +48,22 @@ export type GradingSystem = {
 export type Grade = {
     id: string;
     organizationId: string;
-    name: string; // e.g., "11th Grade"
-    groupName: string; // e.g., "A"
+    name: string; 
 };
+
+export type Group = {
+    id: string;
+    organizationId: string;
+    name: string;
+};
+
+export type GradeWithGroup = {
+    id: string;
+    organizationId: string;
+    gradeId: string;
+    groupId: string;
+};
+
 
 export type Subject = {
     id: string;
@@ -58,6 +71,20 @@ export type Subject = {
     name: string;
     description: string;
     gradeId?: string;
+};
+
+export type PerformanceIndicator = {
+    id: string;
+    organizationId: string;
+    subjectId: string;
+    gradeId: string;
+    indicators: {
+        bajo: string[];
+        basico: string[];
+        alto: string[];
+        superior: string[];
+    };
+    createdAt: any;
 };
 
 
@@ -157,6 +184,39 @@ export async function deleteGrade(id: string) {
     await deleteDoc(gradeDoc);
 }
 
+// Groups
+export async function getGroups(organizationId: string): Promise<Group[]> {
+    const groupsCol = collection(db, "groups");
+    const q = query(groupsCol, where("organizationId", "==", organizationId));
+    const groupsSnapshot = await getDocs(q);
+    return groupsSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Group));
+}
+
+export async function addGroup(organizationId: string, group: Omit<Group, 'id' | 'organizationId'>) {
+    const groupsCol = collection(db, "groups");
+    const docRef = await addDoc(groupsCol, { organizationId, ...group });
+    return { id: docRef.id, organizationId, ...group };
+}
+
+// GradeWithGroup
+export async function getGradesWithGroups(organizationId: string): Promise<GradeWithGroup[]> {
+    const gradesWithGroupsCol = collection(db, "gradesWithGroups");
+    const q = query(gradesWithGroupsCol, where("organizationId", "==", organizationId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as GradeWithGroup));
+}
+
+export async function addGradeWithGroup(organizationId: string, gradeWithGroup: Omit<GradeWithGroup, 'id' | 'organizationId'>) {
+    const gradesWithGroupsCol = collection(db, "gradesWithGroups");
+    const docRef = await addDoc(gradesWithGroupsCol, { organizationId, ...gradeWithGroup });
+    return { id: docRef.id, organizationId, ...gradeWithGroup };
+}
+
+export async function deleteGradeWithGroup(id: string) {
+    const docRef = doc(db, "gradesWithGroups", id);
+    await deleteDoc(docRef);
+}
+
 
 // Subjects
 export async function getSubjects(organizationId: string): Promise<Subject[]> {
@@ -181,6 +241,29 @@ export async function deleteSubject(id: string) {
     const subjectDoc = doc(db, "subjects", id);
     await deleteDoc(subjectDoc);
 }
+
+
+// Performance Indicators
+export async function getPerformanceIndicatorsBySubject(subjectId: string): Promise<PerformanceIndicator[]> {
+    const indicatorsCol = collection(db, "performanceIndicators");
+    const q = query(indicatorsCol, where("subjectId", "==", subjectId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as PerformanceIndicator));
+}
+
+export async function addPerformanceIndicator(
+    organizationId: string,
+    indicatorData: Omit<PerformanceIndicator, 'id' | 'createdAt' | 'organizationId'>
+) {
+    const indicatorsCol = collection(db, "performanceIndicators");
+    const docRef = await addDoc(indicatorsCol, {
+        ...indicatorData,
+        organizationId,
+        createdAt: new Date(),
+    });
+    return { id: docRef.id, ...indicatorData };
+}
+
 
 
 // Admin Dashboard Setup Status
