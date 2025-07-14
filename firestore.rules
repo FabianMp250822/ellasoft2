@@ -2,33 +2,46 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper functions
+
+    // Helper function to check if a user is a superadmin
     function isSuperAdmin() {
       return request.auth.token.superadmin == true;
     }
-    
-    function isSignedIn() {
-      return request.auth != null;
-    }
 
+    // Helper function to check if the user belongs to the specified organization
     function isOrganizationMember(orgId) {
       return request.auth.token.organizationId == orgId;
     }
-
-    // Rules for organizations collection
-    match /organizations/{orgId} {
+    
+    // Superadmins can read/write anything
+    match /{document=**} {
       allow read, write: if isSuperAdmin();
     }
+
+    // Organizations can only be managed by superadmins
+    match /organizations/{orgId} {
+        allow read, write: if isSuperAdmin();
+    }
     
-    // Generic rules for organization-specific data
-    match /{collection}/{docId} 
-      where collection in ['academicPeriods', 'gradingSystems', 'grades', 'subjects', 'performanceIndicators', 'teachers', 'students', 'academicLoad'] {
-      
-      // Admins of the specific organization can read and write their own data.
-      // Superadmins can do anything.
-      allow read, write: if isSuperAdmin() || 
-                           (isSignedIn() && isOrganizationMember(request.resource.data.organizationId));
+    // Rules for organization-specific collections
+    match /academicPeriods/{docId} {
+      allow read: if isOrganizationMember(resource.data.organizationId);
+      allow write: if isOrganizationMember(request.resource.data.organizationId);
+    }
+    
+    match /gradingSystems/{docId} {
+      allow read: if isOrganizationMember(resource.data.organizationId);
+      allow write: if isOrganizationMember(request.resource.data.organizationId);
+    }
+    
+    match /grades/{docId} {
+      allow read: if isOrganizationMember(resource.data.organizationId);
+      allow write: if isOrganizationMember(request.resource.data.organizationId);
+    }
+
+    match /subjects/{docId} {
+      allow read: if isOrganizationMember(resource.data.organizationId);
+      allow write: if isOrganizationMember(request.resource.data.organizationId);
     }
   }
 }
