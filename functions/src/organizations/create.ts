@@ -20,7 +20,7 @@ const uploadImage = async (dataUri: string, path: string): Promise<string> => {
 
   const bucket = admin.storage().bucket();
   // Generate a unique file name, but keep the extension
-  const fileExtension = mimeType.split('/')[1];
+  const fileExtension = mimeType.split("/")[1];
   const fileName = `${path}/${Date.now()}.${fileExtension}`;
   const file = bucket.file(fileName);
 
