@@ -54,6 +54,8 @@ export function CreateTeacherForm({ organizationId, subjects, grades, onSuccess,
     register,
     handleSubmit,
     control,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
@@ -61,6 +63,16 @@ export function CreateTeacherForm({ organizationId, subjects, grades, onSuccess,
     }
   });
   const { toast } = useToast();
+
+  const [selectedGrade, setSelectedGrade] = React.useState<string>("");
+
+  const filteredSubjects = selectedGrade ? subjects.filter(subject => subject.gradeId === selectedGrade) : [];
+
+  const handleGradeChange = (gradeId: string) => {
+    setSelectedGrade(gradeId);
+    // When grade changes, clear the selected subjects from the old grade
+    setValue('assignedSubjects', []);
+  }
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
@@ -102,10 +114,6 @@ export function CreateTeacherForm({ organizationId, subjects, grades, onSuccess,
     }
   };
   
-  const getGradeName = (gradeId: string | undefined) => {
-      return grades.find(g => g.id === gradeId)?.name || "N/A";
-  }
-
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex h-full flex-col">
         <ScrollArea className="flex-grow pr-6">
@@ -155,32 +163,58 @@ export function CreateTeacherForm({ organizationId, subjects, grades, onSuccess,
                <h3 className="text-lg font-medium text-foreground">
                 Assign Subjects
               </h3>
-              <p className="text-sm text-muted-foreground">Select the subjects and grades this teacher will be responsible for.</p>
-              <Controller
-                control={control}
-                name="assignedSubjects"
-                render={({ field }) => (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-48 overflow-y-auto rounded-md border p-4">
-                        {subjects.map(subject => (
-                            <div key={subject.id} className="flex items-center space-x-2">
-                                <Checkbox
-                                    id={`subject-${subject.id}`}
-                                    checked={field.value.includes(subject.id)}
-                                    onCheckedChange={(checked) => {
-                                        return checked
-                                        ? field.onChange([...field.value, subject.id])
-                                        : field.onChange(field.value.filter(value => value !== subject.id))
-                                    }}
-                                />
-                                <label htmlFor={`subject-${subject.id}`} className="text-sm font-medium leading-none">
-                                    {subject.name} <span className="text-muted-foreground">({getGradeName(subject.gradeId)})</span>
-                                </label>
-                            </div>
-                        ))}
-                    </div>
-                )}
-                />
-                {errors.assignedSubjects && <p className="text-destructive text-sm">{errors.assignedSubjects.message}</p>}
+              <p className="text-sm text-muted-foreground">First, select a grade to see its available subjects.</p>
+
+              <div className="space-y-2">
+                <Label>Grade</Label>
+                <Select onValueChange={handleGradeChange} value={selectedGrade}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a grade..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {grades.map(grade => (
+                      <SelectItem key={grade.id} value={grade.id}>{grade.name} - {grade.groupName}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {selectedGrade && (
+                 <div className="space-y-2">
+                    <Label>Available Subjects for Selected Grade</Label>
+                    {filteredSubjects.length > 0 ? (
+                        <Controller
+                            control={control}
+                            name="assignedSubjects"
+                            render={({ field }) => (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-48 overflow-y-auto rounded-md border p-4">
+                                    {filteredSubjects.map(subject => (
+                                        <div key={subject.id} className="flex items-center space-x-2">
+                                            <Checkbox
+                                                id={`subject-${subject.id}`}
+                                                checked={field.value.includes(subject.id)}
+                                                onCheckedChange={(checked) => {
+                                                    return checked
+                                                    ? field.onChange([...field.value, subject.id])
+                                                    : field.onChange(field.value.filter(value => value !== subject.id))
+                                                }}
+                                            />
+                                            <label htmlFor={`subject-${subject.id}`} className="text-sm font-medium leading-none">
+                                                {subject.name}
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        />
+                    ) : (
+                        <div className="text-center text-muted-foreground p-4 border-2 border-dashed rounded-lg">
+                            No subjects have been created for this grade yet.
+                        </div>
+                    )}
+                    {errors.assignedSubjects && <p className="text-destructive text-sm">{errors.assignedSubjects.message}</p>}
+                 </div>
+              )}
             </div>
           </div>
         </ScrollArea>
