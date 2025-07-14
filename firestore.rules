@@ -2,44 +2,53 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions
-    function isSuperAdmin() {
-      return request.auth != null && request.auth.token.superadmin == true;
-    }
-
+  
+    // Helper function to check if a user is part of an organization
     function isOrganizationMember(orgId) {
       return request.auth != null && request.auth.token.organizationId == orgId;
     }
     
-    // Superadmin can read/write anything
-    match /{document=**} {
+    // Helper function to check if a user is a superadmin
+    function isSuperAdmin() {
+      return request.auth != null && request.auth.token.superadmin == true;
+    }
+
+    // Organizations: Only superadmins can read/write organizations
+    match /organizations/{orgId} {
       allow read, write: if isSuperAdmin();
     }
-
-    // Organizations can only be read by superadmins (covered above).
-    // The getOrganizations callable function handles this securely.
-    match /organizations/{orgId} {
-      allow read, write: if false; // Block direct client access
-    }
-
-    // Rules for collections that belong to an organization
+    
+    // Academic Periods, Grading Systems, Grades, Groups, Subjects, Performance Indicators
+    // Users can read/write documents only if they belong to the specified organization.
     match /academicPeriods/{docId} {
-      allow read: if isOrganizationMember(resource.data.organizationId);
-      allow write: if isOrganizationMember(request.resource.data.organizationId);
-    }
-    match /gradingSystems/{docId} {
-      allow read: if isOrganizationMember(resource.data.organizationId);
-      allow write: if isOrganizationMember(request.resource.data.organizationId);
-    }
-    match /grades/{docId} {
-      allow read: if isOrganizationMember(resource.data.organizationId);
-      allow write: if isOrganizationMember(request.resource.data.organizationId);
-    }
-    match /subjects/{docId} {
-      allow read: if isOrganizationMember(resource.data.organizationId);
-      allow write: if isOrganizationMember(request.resource.data.organizationId);
+        allow read, write: if isOrganizationMember(resource.data.organizationId);
     }
     
+    match /gradingSystems/{docId} {
+        allow read, write: if isOrganizationMember(resource.data.organizationId);
+    }
+
+    match /grades/{docId} {
+        allow read, write: if isOrganizationMember(resource.data.organizationId);
+    }
+    
+    match /groups/{docId} {
+        allow read, write: if isOrganization_member(resource.data.organizationId);
+    }
+    
+    match /gradesWithGroups/{docId} {
+        allow read, write: if isOrganizationMember(resource.data.organizationId);
+    }
+    
+    match /subjects/{docId} {
+        allow read, write: if isOrganizationMember(resource.data.organizationId);
+    }
+
+    match /performanceIndicators/{docId} {
+        // Read: Any member of the organization can read indicators.
+        allow read: if isOrganizationMember(resource.data.organizationId);
+        // Write: Only members of the organization can create/update/delete.
+        allow write: if isOrganizationMember(request.resource.data.organizationId);
+    }
   }
 }
