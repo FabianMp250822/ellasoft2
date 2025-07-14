@@ -3,20 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { addSubject, deleteSubject, updateSubject } from "@/lib/data";
-import { getAuth } from "firebase-admin/auth";
-import { cookies } from "next/headers";
-
-async function getOrganizationId(): Promise<string> {
-    const sessionCookie = cookies().get("session")?.value || "";
-    if (!sessionCookie) {
-        throw new Error("User not authenticated");
-    }
-    const decodedClaims = await getAuth().verifySessionCookie(sessionCookie, true);
-    if (!decodedClaims.organizationId) {
-        throw new Error("Organization ID not found in claims");
-    }
-    return decodedClaims.organizationId;
-}
+import { getOrganizationIdFromSession } from "@/lib/server-utils";
 
 const FormSchema = z.object({
   id: z.string(),
@@ -29,7 +16,7 @@ const UpdateSubject = FormSchema;
 
 export async function createSubjectAction(prevState: any, formData: FormData) {
   try {
-    const orgId = await getOrganizationId();
+    const orgId = await getOrganizationIdFromSession();
     const validatedFields = CreateSubject.safeParse({
         name: formData.get("name"),
         description: formData.get("description"),

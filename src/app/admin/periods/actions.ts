@@ -3,20 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { addAcademicPeriod, deleteAcademicPeriod, updateAcademicPeriod } from "@/lib/data";
-import { getAuth } from "firebase-admin/auth";
-import { cookies } from "next/headers";
+import { getOrganizationIdFromSession } from "@/lib/server-utils";
 
-async function getOrganizationId(): Promise<string> {
-    const sessionCookie = cookies().get("session")?.value || "";
-    if (!sessionCookie) {
-        throw new Error("User not authenticated");
-    }
-    const decodedClaims = await getAuth().verifySessionCookie(sessionCookie, true);
-    if (!decodedClaims.organizationId) {
-        throw new Error("Organization ID not found in claims");
-    }
-    return decodedClaims.organizationId;
-}
 
 const FormSchema = z.object({
   id: z.string(),
@@ -34,7 +22,7 @@ const UpdatePeriod = FormSchema;
 
 export async function createPeriodAction(prevState: any, formData: FormData) {
   try {
-    const orgId = await getOrganizationId();
+    const orgId = await getOrganizationIdFromSession();
     const validatedFields = CreatePeriod.safeParse({
         name: formData.get("name"),
         startDate: formData.get("startDate"),
