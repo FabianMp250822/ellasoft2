@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -40,8 +41,15 @@ import {
     AlertDialogTrigger,
   } from "@/components/ui/alert-dialog";
 
-type EditableActivity = Activity & { isEditing?: boolean };
+type EditableActivity = Activity & { isNew?: boolean, isEditing?: boolean };
 type EditableStudentGrades = { [activityId: string]: { score: number | string, id?: string } };
+
+// Define callable functions
+const getGradebookDataFn = httpsCallable< { loadId: string }, GradebookData>(functions, 'getGradebookData');
+const createOrUpdateActivityFn = httpsCallable(any, 'createOrUpdateActivity');
+const deleteActivityFn = httpsCallable<{ loadId: string; activityId: string }, { success: boolean }>(functions, 'deleteActivity');
+const createOrUpdateStudentGradeFn = httpsCallable(any, 'createOrUpdateStudentGrade');
+
 
 export default function GradebookPage() {
   const params = useParams();
@@ -70,11 +78,6 @@ export default function GradebookPage() {
             totalPercentage += activity.percentage;
         }
     });
-
-    // Normalize if total percentage is not 100
-    // if (totalPercentage > 0 && totalPercentage !== 100) {
-    //     return (finalGrade / totalPercentage) * 100;
-    // }
     
     return finalGrade;
   }, [activities, studentGrades]);
@@ -84,13 +87,14 @@ export default function GradebookPage() {
     if (!user || !claims?.organizationId) return;
     setLoading(true);
     try {
-      // Fetch load details to display header info
-      const [allLoads, allSubjects, allGrades, gradebookData] = await Promise.all([
+      const [allLoads, allSubjects, allGrades, gradebookResult] = await Promise.all([
         getTeacherAcademicLoads(),
         getSubjects(claims.organizationId),
         getGrades(claims.organizationId),
-        getGradebookData(loadId),
+        getGradebookDataFn({ loadId }),
       ]);
+      
+      const gradebookData = gradebookResult.data;
 
       const currentLoad = allLoads.find(l => l.id === loadId);
       if(currentLoad) {
@@ -130,7 +134,7 @@ export default function GradebookPage() {
 
   const handleGradeChange = (studentId: string, activityId: string, score: string) => {
     const numericScore = score === '' ? '' : parseFloat(score);
-    if (score !== '' && (isNaN(numericScore) || numericScore < 0 || numericScore > 5)) {
+    if (score !== '' && (isNaN(numericScore as number) || (numericScore as number) < 0 || (numericScore as number) > 5)) {
         toast({ title: "Invalid Score", description: "Score must be a number between 0 and 5.", variant: "destructive"});
         return;
     }
@@ -151,7 +155,7 @@ export default function GradebookPage() {
     setActivities(prev => prev.map(act => {
         if (act.id === activityId) {
             const newValue = field === 'percentage' ? parseInt(value, 10) : value;
-            if (field === 'percentage' && (isNaN(newValue as number) || newValue < 0 || newValue > 100)) {
+            if (field === 'percentage' && (isNaN(newValue as number) || (newValue as number) < 0 || (newValue as number) > 100)) {
                  toast({ title: "Invalid Percentage", description: "Percentage must be between 0 and 100.", variant: "destructive"});
                  return act;
             }
@@ -167,6 +171,7 @@ export default function GradebookPage() {
         loadId,
         name: 'New Activity',
         percentage: 0,
+        isNew: true,
         isEditing: true
     };
     setActivities(prev => [...prev, newActivity]);
@@ -176,26 +181,33 @@ export default function GradebookPage() {
     setSaving(true);
     toast({ title: "Saving...", description: "Your changes are being saved." });
     try {
-        const createOrUpdateActivityFn = httpsCallable(functions, 'createOrUpdateActivity');
-        const createOrUpdateStudentGradeFn = httpsCallable(functions, 'createOrUpdateStudentGrade');
+        const activityUpdates = activities.map(activity => ({
+            loadId,
+            activityId: activity.isNew ? null : activity.id,
+            name: activity.name,
+            percentage: activity.percentage,
+        }));
+        
+        const activityResults = await Promise.all(
+            activityUpdates.map(payload => createOrUpdateActivityFn(payload))
+        );
 
-        const activityPromises = activities.map(activity => {
-            const isNew = activity.id.startsWith('new-');
-            return createOrUpdateActivityFn({
-                loadId,
-                activityId: isNew ? null : activity.id,
-                name: activity.name,
-                percentage: activity.percentage,
-            })
-        });
+        const newActivityIdMap = activityResults.reduce((acc, result: any, index) => {
+            const originalActivity = activities[index];
+            if (originalActivity.isNew) {
+                acc[originalActivity.id] = result.data.activityId;
+            }
+            return acc;
+        }, {} as {[key: string]: string});
 
         const gradePromises: Promise<any>[] = [];
         Object.entries(studentGrades).forEach(([studentId, grades]) => {
-            Object.entries(grades).forEach(([activityId, grade]) => {
+            Object.entries(grades).forEach(([tempActivityId, grade]) => {
                 if (typeof grade.score === 'number') {
+                    const finalActivityId = newActivityIdMap[tempActivityId] || tempActivityId;
                     gradePromises.push(createOrUpdateStudentGradeFn({
                         loadId,
-                        activityId,
+                        activityId: finalActivityId,
                         studentId,
                         score: grade.score
                     }));
@@ -203,13 +215,13 @@ export default function GradebookPage() {
             });
         });
         
-        await Promise.all([...activityPromises, ...gradePromises]);
+        await Promise.all(gradePromises);
 
         toast({ title: "Success!", description: "Gradebook saved successfully." });
-        fetchData(); // Refetch data to get new IDs and confirm state
+        fetchData(); 
     } catch (error) {
         console.error("Failed to save gradebook:", error);
-        toast({ title: "Error", description: "Could not save changes.", variant: "destructive"});
+        toast({ title: "Error", description: (error as any).message || "Could not save changes.", variant: "destructive"});
     } finally {
         setSaving(false);
     }
@@ -217,10 +229,9 @@ export default function GradebookPage() {
 
   const handleDeleteActivity = async (activityId: string) => {
     try {
-        const deleteActivityFn = httpsCallable(functions, 'deleteActivity');
         await deleteActivityFn({ loadId, activityId });
         toast({ title: "Success", description: "Activity deleted."});
-        fetchData(); // Refetch data
+        fetchData();
     } catch(error) {
         console.error("Failed to delete activity", error);
         toast({ title: "Error", description: "Could not delete activity.", variant: "destructive"});
@@ -257,17 +268,18 @@ export default function GradebookPage() {
             <div className="flex gap-2">
                 <Button onClick={addNewActivity} variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Activity</Button>
                 <Button onClick={handleSave} disabled={saving}>
-                    {saving ? <LoadingSpinner /> : <Save className="mr-2 h-4 w-4" />} Save All Changes
+                    {saving ? <LoadingSpinner /> : <><Save className="mr-2 h-4 w-4" /> Save All Changes</>}
                 </Button>
             </div>
         </CardHeader>
         <CardContent>
+            <div className="overflow-x-auto">
             <Table>
                 <TableHeader>
                     <TableRow>
-                    <TableHead className="w-[250px] sticky left-0 bg-background z-10">Student</TableHead>
+                    <TableHead className="w-[250px] sticky left-0 bg-card z-10">Student</TableHead>
                     {activities.map(activity => (
-                        <TableHead key={activity.id} className="text-center">
+                        <TableHead key={activity.id} className="text-center min-w-[200px]">
                             {activity.isEditing ? (
                                 <Input 
                                     value={activity.name}
@@ -275,14 +287,14 @@ export default function GradebookPage() {
                                     className="min-w-[150px] text-center"
                                 />
                             ) : (
-                                <div className='flex items-center gap-2'>
+                                <div className='flex items-center justify-center gap-1'>
                                     {activity.name}
                                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setActivities(acts => acts.map(a => a.id === activity.id ? {...a, isEditing: true} : a))}>
                                         <Pencil className="h-3 w-3" />
                                     </Button>
                                 </div>
                             )}
-                            <div className='flex items-center gap-2 mt-1'>
+                            <div className='flex items-center justify-center gap-2 mt-1'>
                                <Input 
                                     type="number"
                                     value={activity.percentage}
@@ -290,7 +302,8 @@ export default function GradebookPage() {
                                     className="w-20 h-8 text-center"
                                 />
                                <span>%</span>
-                               <AlertDialog>
+                               {!activity.isNew && (
+                                <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive">
                                         <Trash2 className="h-3 w-3" />
@@ -309,16 +322,17 @@ export default function GradebookPage() {
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                                </AlertDialog>
+                               )}
                             </div>
                         </TableHead>
                     ))}
-                    <TableHead className="text-center">Final Grade</TableHead>
+                    <TableHead className="text-center sticky right-0 bg-card z-10">Final Grade</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {data.students.map(student => (
                     <TableRow key={student.id}>
-                        <TableCell className="font-medium sticky left-0 bg-background z-10">{student.firstName} {student.lastName}</TableCell>
+                        <TableCell className="font-medium sticky left-0 bg-card z-10">{student.firstName} {student.lastName}</TableCell>
                         {activities.map(activity => (
                         <TableCell key={activity.id}>
                             <Input
@@ -326,20 +340,21 @@ export default function GradebookPage() {
                                 placeholder="-"
                                 value={studentGrades[student.id]?.[activity.id]?.score ?? ''}
                                 onChange={(e) => handleGradeChange(student.id, activity.id, e.target.value)}
-                                className="w-24 text-center"
+                                className="w-24 text-center mx-auto"
                                 min="0"
                                 max="5"
                                 step="0.1"
                             />
                         </TableCell>
                         ))}
-                        <TableCell className="text-center font-bold text-lg">
+                        <TableCell className="text-center font-bold text-lg sticky right-0 bg-card z-10">
                             {calculateFinalGrade(student.id).toFixed(2)}
                         </TableCell>
                     </TableRow>
                     ))}
                 </TableBody>
             </Table>
+            </div>
         </CardContent>
        </Card>
     </div>
