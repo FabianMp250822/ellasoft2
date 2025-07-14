@@ -23,6 +23,17 @@ service cloud.firestore {
     function isResourceOwner(resource) {
       return request.auth.uid == resource.data.uid;
     }
+
+    // A helper function to check if the user is a member of the organization
+    // associated with the resource being accessed.
+    // This works for both read (resource.data) and write (request.resource.data) operations.
+    function isMemberOfResourceOrg() {
+      let orgId = resource.data.organizationId; // For read operations
+      if (request.resource != null) {
+        orgId = request.resource.data.organizationId; // For write operations
+      }
+      return isOrganizationMember(orgId);
+    }
     
     // Global rule: Super Admins have access to everything.
     match /{document=**} {
@@ -46,36 +57,28 @@ service cloud.firestore {
     // TENANT-SPECIFIC DATA
     // Rules for collections that belong to a specific organization.
     match /academicPeriods/{docId} {
-        allow read: if isOrganizationMember(resource.data.organizationId);
-        allow write: if isOrganizationMember(request.resource.data.organizationId);
+        allow read, write: if isMemberOfResourceOrg();
     }
     match /gradingSystems/{docId} {
-        allow read: if isOrganizationMember(resource.data.organizationId);
-        allow write: if isOrganizationMember(request.resource.data.organizationId);
+        allow read, write: if isMemberOfResourceOrg();
     }
     match /grades/{docId} {
-       allow read: if isOrganizationMember(resource.data.organizationId);
-       allow write: if isOrganizationMember(request.resource.data.organizationId);
+       allow read, write: if isMemberOfResourceOrg();
     }
     match /subjects/{docId} {
-       allow read: if isOrganizationMember(resource.data.organizationId);
-       allow write: if isOrganizationMember(request.resource.data.organizationId);
+       allow read, write: if isMemberOfResourceOrg();
     }
      match /students/{docId} {
-       allow read: if isOrganizationMember(resource.data.organizationId);
-       allow write: if isOrganizationMember(request.resource.data.organizationId);
+       allow read, write: if isMemberOfResourceOrg();
     }
      match /teachers/{docId} {
-       allow read: if isOrganizationMember(resource.data.organizationId);
-       allow write: if isOrganizationMember(request.resource.data.organizationId);
+       allow read, write: if isMemberOfResourceOrg();
     }
      match /performanceIndicators/{docId} {
-       allow read: if isOrganizationMember(resource.data.organizationId);
-       allow write: if isOrganizationMember(request.resource.data.organizationId);
+       allow read, write: if isMemberOfResourceOrg();
     }
      match /academicLoads/{docId} {
-       allow read: if isOrganizationMember(resource.data.organizationId);
-       allow write: if isOrganizationMember(request.resource.data.organizationId);
+       allow read, write: if isMemberOfResourceOrg();
     }
   }
 }
