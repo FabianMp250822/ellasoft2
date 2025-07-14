@@ -42,7 +42,8 @@ import { MoreHorizontal, PlusCircle, Trash2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import type { Grade } from "@/lib/data";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useActionState } from "react";
 import { createGradeAction, updateGradeAction, deleteGradeAction } from "./actions";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
@@ -66,7 +67,7 @@ function GradeForm({
   onClose: () => void;
 }) {
   const action = grade ? updateGradeAction : createGradeAction;
-  const [state, dispatch] = useFormState(action, { message: null, errors: {} });
+  const [state, dispatch] = useActionState(action, { message: null, errors: {} });
   const { toast } = useToast();
 
   React.useEffect(() => {

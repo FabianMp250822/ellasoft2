@@ -43,7 +43,8 @@ import { MoreHorizontal, PlusCircle, Trash2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import type { AcademicPeriod } from "@/lib/data";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useActionState } from "react";
 import { createPeriodAction, updatePeriodAction, deletePeriodAction } from "./actions";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
@@ -67,7 +68,7 @@ function PeriodForm({
   onClose: () => void;
 }) {
   const action = period ? updatePeriodAction : createPeriodAction;
-  const [state, dispatch] = useFormState(action, { message: null, errors: {} });
+  const [state, dispatch] = useActionState(action, { message: null, errors: {} });
   const { toast } = useToast();
 
   React.useEffect(() => {

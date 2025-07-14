@@ -44,7 +44,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { GradingSystem } from "@/lib/data";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useActionState } from "react";
 import { createGradingSystemAction, updateGradingSystemAction, deleteGradingSystemAction } from "./actions";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
@@ -68,7 +69,7 @@ function GradingSystemForm({
   onClose: () => void;
 }) {
   const action = system ? updateGradingSystemAction : createGradingSystemAction;
-  const [state, dispatch] = useFormState(action, { message: null, errors: {} });
+  const [state, dispatch] = useActionState(action, { message: null, errors: {} });
   const { toast } = useToast();
 
   React.useEffect(() => {
