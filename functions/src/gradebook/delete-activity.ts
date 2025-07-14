@@ -54,4 +54,3 @@ export const deleteActivity = onCall(async (request) => {
   }
 });
 
-    

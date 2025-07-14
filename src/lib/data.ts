@@ -85,6 +85,7 @@ export type Teacher = {
 };
 
 export type Student = {
+    id: string; // This should be the UID
     uid: string;
     organizationId: string;
     // Personal Data
@@ -120,6 +121,27 @@ export type AcademicLoad = {
     academicPeriodId: string;
     createdAt: any;
 };
+
+export type Activity = {
+    id: string;
+    loadId: string;
+    name: string;
+    percentage: number;
+};
+
+export type StudentGrade = {
+    id: string;
+    studentId: string;
+    activityId: string;
+    loadId: string;
+    score: number;
+};
+
+export type GradebookData = {
+    students: Student[];
+    activities: Activity[];
+    grades: StudentGrade[];
+}
 
 
 // Organizations
@@ -250,7 +272,7 @@ export async function getStudents(organizationId: string): Promise<Student[]> {
     const studentsCol = collection(db, "students");
     const q = query(studentsCol, where("organizationId", "==", organizationId));
     const studentsSnapshot = await getDocs(q);
-    return studentsSnapshot.docs.map(d => d.data() as Student);
+    return studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
 }
 
 export async function getStudentsByGrade(gradeId: string): Promise<Student[]> {
@@ -332,4 +354,17 @@ export async function getSetupStatus(organizationId: string) {
       academicLoad,
       indicators: false, // This can be updated when indicators have a "completed" state
     };
+}
+
+
+// Gradebook
+export async function getGradebookData(loadId: string): Promise<GradebookData> {
+    const getGradebookDataFn = httpsCallable(functions, 'getGradebookData');
+    const result = await getGradebookDataFn({ loadId });
+    // The student 'id' field might not be coming from the function, let's ensure it's there.
+    const data = result.data as GradebookData;
+    if (data.students) {
+        data.students = data.students.map(s => ({...s, id: (s as any).uid || s.id}));
+    }
+    return data;
 }

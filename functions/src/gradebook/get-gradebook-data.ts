@@ -62,4 +62,3 @@ export const getGradebookData = onCall(async (request) => {
   }
 });
 
-    

@@ -30,4 +30,3 @@ export {createOrUpdateActivity} from "./gradebook/create-or-update-activity";
 export {createOrUpdateStudentGrade} from "./gradebook/create-or-update-student-grade";
 export {deleteActivity} from "./gradebook/delete-activity";
 
-    

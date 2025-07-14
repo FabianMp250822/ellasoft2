@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import * as admin from "firebase-admin";
 import {HttpsError} from "firebase-functions/v2/https";
 
@@ -26,4 +27,3 @@ export async function verifyTeacherAndLoad(teacherId: string, loadId: string): P
   return loadDoc;
 }
 
-    

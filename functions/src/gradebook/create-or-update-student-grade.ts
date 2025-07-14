@@ -79,4 +79,3 @@ export const createOrUpdateStudentGrade = onCall(async (request) => {
   }
 });
 
-    
