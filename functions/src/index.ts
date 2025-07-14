@@ -9,7 +9,8 @@
 
 import * as admin from "firebase-admin";
 import {setSuperAdminClaim} from "./set-super-admin-claim";
+import {getOrganizations} from "./get-organizations";
 
 admin.initializeApp();
 
-export {setSuperAdminClaim};
+export {setSuperAdminClaim, getOrganizations};

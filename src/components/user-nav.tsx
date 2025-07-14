@@ -16,11 +16,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, User as UserIcon } from "lucide-react"
+import { LogOut, User as UserIcon, RefreshCw } from "lucide-react"
 import { useAuth } from "@/context/auth-context"
 
 export function UserNav() {
-  const { user, claims, logout } = useAuth();
+  const { user, claims, logout, refreshToken } = useAuth();
   
   if (!user) {
     return null;
@@ -61,6 +61,10 @@ export function UserNav() {
           <DropdownMenuItem>
             <UserIcon className="mr-2 h-4 w-4" />
             <span>Profile</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={refreshToken}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            <span>Refresh Permissions</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />

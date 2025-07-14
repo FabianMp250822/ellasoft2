@@ -11,7 +11,7 @@ import {
   getDoc,
   limit,
 } from "firebase/firestore";
-import { db, functions } from "./firebase"; 
+import { db, functions, auth } from "./firebase"; 
 import { httpsCallable } from "firebase/functions";
 
 export type Organization = {
@@ -63,6 +63,16 @@ export type Subject = {
 // Organizations
 export async function getOrganizations(): Promise<Organization[]> {
   try {
+    // Force token refresh before calling the function to ensure we have the latest claims
+    const user = auth.currentUser;
+    if (!user) {
+      console.error('No authenticated user found');
+      return [];
+    }
+    
+    // Force refresh the token to get the latest claims
+    await user.getIdToken(true);
+    
     // When calling a function from a non-default codebase, you must use the name 'codebase-functionName'
     const getOrganizationsFunction = httpsCallable(functions, 'getOrganizations');
     const result = await getOrganizationsFunction();

@@ -22,6 +22,7 @@ interface AuthContextType {
   error: string | null;
   login: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshToken: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -102,7 +103,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const value = { user, claims, loading, error, login, logout };
+  const refreshToken = async () => {
+    if (user) {
+      try {
+        const tokenResult = await user.getIdTokenResult(true); // Force refresh
+        setClaims(tokenResult.claims);
+        console.log('Token refreshed, new claims:', tokenResult.claims);
+      } catch (error) {
+        console.error('Error refreshing token:', error);
+      }
+    }
+  };
+
+  const value = { user, claims, loading, error, login, logout, refreshToken };
 
   return (
     <AuthContext.Provider value={value}>
