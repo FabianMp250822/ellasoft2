@@ -7,6 +7,7 @@ import {
   ClipboardPen,
   MessageSquareQuote,
   Menu,
+  GraduationCap
 } from "lucide-react"
 import {
   Tooltip,

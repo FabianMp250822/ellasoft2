@@ -253,6 +253,13 @@ export async function getStudents(organizationId: string): Promise<Student[]> {
     return studentsSnapshot.docs.map(d => d.data() as Student);
 }
 
+export async function getStudentsByGrade(gradeId: string): Promise<Student[]> {
+    const studentsCol = collection(db, "students");
+    const q = query(studentsCol, where("gradeId", "==", gradeId));
+    const studentsSnapshot = await getDocs(q);
+    return studentsSnapshot.docs.map(d => d.data() as Student);
+}
+
 
 // Academic Load
 export async function getAcademicLoads(organizationId: string): Promise<AcademicLoad[]> {
