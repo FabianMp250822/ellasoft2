@@ -18,7 +18,7 @@ export const setOrganizationStatus = onCall(async (request) => {
     );
   }
 
-  const { organizationId, status } = request.data;
+  const {organizationId, status} = request.data;
 
   // 2. Validate input
   if (!organizationId || !status) {
@@ -38,11 +38,11 @@ export const setOrganizationStatus = onCall(async (request) => {
 
   try {
     const orgRef = db.collection("organizations").doc(organizationId);
-    await orgRef.update({ status: status });
+    await orgRef.update({status: status});
 
     const message = `Successfully updated organization ${organizationId} status to ${status}.`;
     logger.info(message);
-    return { success: true, message: message };
+    return {success: true, message: message};
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     logger.error(`Error updating organization ${organizationId}:`, errorMessage);

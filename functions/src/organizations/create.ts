@@ -1,8 +1,8 @@
 
 /* eslint-disable max-len */
-import { onCall, HttpsError } from "firebase-functions/v2/https";
+import {onCall, HttpsError} from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { v4 as uuidv4 } from "uuid";
+import {v4 as uuidv4} from "uuid";
 import * as logger from "firebase-functions/logger";
 
 const storage = admin.storage();
@@ -19,9 +19,9 @@ export const createOrganization = onCall(async (request) => {
 
   const data = request.data;
   logger.info("Received data for organization creation:", {
-    ...data, 
-    logoBase64: 'REDACTED', 
-    adminPhotoBase64: 'REDACTED' 
+    ...data,
+    logoBase64: "REDACTED",
+    adminPhotoBase64: "REDACTED",
   });
 
   // 2. Validate input data
@@ -52,13 +52,13 @@ export const createOrganization = onCall(async (request) => {
       const base64EncodedImageString = base64String.replace(/^data:image\/\w+;base64,/, "");
       const imageBuffer = Buffer.from(base64EncodedImageString, "base64");
 
-      const bucket = storage.bucket(); 
+      const bucket = storage.bucket();
       const fileUpload = bucket.file(`${path}/${uuidv4()}-${fileName}`);
 
       await fileUpload.save(imageBuffer, {
-        metadata: { contentType: "image/jpeg" }, // Adjust content type if needed
+        metadata: {contentType: "image/jpeg"}, // Adjust content type if needed
       });
-      
+
       // Make the file public
       await fileUpload.makePublic();
 
@@ -68,11 +68,11 @@ export const createOrganization = onCall(async (request) => {
 
     const logoUrl = await uploadImage(data.logoBase64, "logos", `${data.orgName}-logo.jpg`);
     const adminPhotoUrl = await uploadImage(data.adminPhotoBase64, "admin_photos", `${adminUser.uid}-photo.jpg`);
-    
+
     // Update the user's photoURL
-    await admin.auth().updateUser(adminUser.uid, { photoURL: adminPhotoUrl });
+    await admin.auth().updateUser(adminUser.uid, {photoURL: adminPhotoUrl});
     logger.info("Images uploaded and user photoURL updated.");
-    
+
     // 5. Create the organization document in Firestore
     const newOrganizationRef = db.collection("organizations").doc();
     const newOrgData = {
