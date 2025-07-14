@@ -9,8 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
-import { functions } from "@/lib/firebase";
-import { httpsCallable } from "firebase/functions";
+import { auth } from "@/lib/firebase";
 import React from "react";
 
 export type FormValues = {
@@ -57,7 +56,13 @@ export function CreateOrganizationForm({ onSuccess, onCancel }: CreateOrganizati
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
-        const createOrganizationFunction = httpsCallable(functions, 'createOrganization');
+        const user = auth.currentUser;
+        if (!user) {
+            throw new Error("You must be logged in to create an organization.");
+        }
+
+        const idToken = await user.getIdToken();
+        const functionUrl = 'https://createorganization-4t6bsm5a6q-uc.a.run.app';
 
         const logoBase64 = data.logo.length > 0 ? await toBase64(data.logo[0]) : null;
         const adminPhotoBase64 = data.adminPhoto.length > 0 ? await toBase64(data.adminPhoto[0]) : null;
@@ -71,20 +76,34 @@ export function CreateOrganizationForm({ onSuccess, onCancel }: CreateOrganizati
             return;
         }
 
-        const payload = {
+        const rawPayload = {
             ...data,
             userLimit: Number(data.userLimit),
             logoBase64,
             adminPhotoBase64,
         };
         
-        // We don't need these fields in the payload anymore
-        delete (payload as any).logo;
-        delete (payload as any).adminPhoto;
-
-        const result = await createOrganizationFunction(payload);
+        delete (rawPayload as any).logo;
+        delete (rawPayload as any).adminPhoto;
         
-        const resultData = result.data as { success: boolean; message: string };
+        const payload = { data: rawPayload };
+
+        const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || 'Failed to create organization.');
+        }
+
+        const result = await response.json();
+        const resultData = result.result as { success: boolean; message: string };
 
         if (resultData.success) {
             toast({ title: "Success", description: resultData.message });
