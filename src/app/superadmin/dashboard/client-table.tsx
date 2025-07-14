@@ -46,7 +46,7 @@ export function OrganizationsClient({ data: initialData }: { data: Organization[
     const result = await setOrganizationStatusAction(orgId, newStatus);
     if (result.success) {
       toast({ title: "Success", description: result.message });
-      // Optimistically update UI or refetch
+      // Optimistically update UI
       setOrganizations(prevOrgs => prevOrgs.map(org => org.id === orgId ? {...org, status: newStatus} : org));
     } else {
       toast({ title: "Error", description: String(result.message), variant: "destructive" });
