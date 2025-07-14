@@ -10,7 +10,7 @@ export const getOrganizations = onCall(async (request) => {
   }
 
   try {
-    // 2. Get the user's most up-to-date claims directly from Firebase Auth
+    // 2. Get the user's most up-to-date claims directly from Firebase Auth to ensure freshness
     const userRecord = await admin.auth().getUser(request.auth.uid);
     const claims = userRecord.customClaims || {};
 
