@@ -38,27 +38,15 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2 } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { Subject } from "@/lib/data";
-import { useFormStatus } from "react-dom";
-import { useActionState } from "react";
-import { createSubjectAction, updateSubjectAction, deleteSubjectAction } from "./actions";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
-import { getSubjects } from "@/lib/data";
+import { getSubjects, addSubject, updateSubject, deleteSubject } from "@/lib/data";
 import { LoadingSpinner } from "@/components/loading-spinner";
-
-function SubmitButton({ children }: { children: React.ReactNode }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Saving..." : children}
-    </Button>
-  );
-}
 
 function SubjectForm({
   subject,
@@ -69,50 +57,55 @@ function SubjectForm({
   organizationId: string;
   onClose: () => void;
 }) {
-  const action = subject ? updateSubjectAction : createSubjectAction;
-  const [state, dispatch] = useActionState(action, { message: null, errors: {} });
+  const [name, setName] = React.useState(subject?.name || "");
+  const [description, setDescription] = React.useState(subject?.description || "");
+  const [isSubmitting, setSubmitting] = React.useState(false);
   const { toast } = useToast();
 
-  React.useEffect(() => {
-    if (state.message) {
-      if(Object.keys(state.errors || {}).length > 0) {
-        toast({ title: "Error", description: state.message, variant: "destructive" });
-      } else {
-        toast({ title: "Success", description: state.message });
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+        if (subject) {
+            await updateSubject(subject.id, { name, description });
+            toast({ title: "Success", description: "Subject updated successfully." });
+        } else {
+            await addSubject(organizationId, { name, description });
+            toast({ title: "Success", description: "Subject created successfully." });
+        }
         onClose();
-      }
+    } catch (error: any) {
+        console.error("Error submitting form:", error);
+        toast({ title: "Error", description: error.message || "An unexpected error occurred.", variant: "destructive" });
+    } finally {
+        setSubmitting(false);
     }
-  }, [state, toast, onClose]);
+  };
 
   return (
-    <form action={dispatch}>
-      <input type="hidden" name="organizationId" value={organizationId} />
-      {subject && <input type="hidden" name="id" value={subject.id} />}
+    <form onSubmit={handleSubmit}>
       <div className="grid gap-4 py-4">
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="name" className="text-right">
             Name
           </Label>
-          <div className="col-span-3">
-            <Input id="name" name="name" defaultValue={subject?.name} placeholder="e.g. Calculus I" />
-             {state.errors?.name && <p className="text-destructive text-sm mt-1">{state.errors.name[0]}</p>}
-          </div>
+          <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" placeholder="e.g. Calculus I" />
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="description" className="text-right">
             Description
           </Label>
-          <div className="col-span-3">
-            <Textarea id="description" name="description" defaultValue={subject?.description} placeholder="A brief description of the subject"/>
-            {state.errors?.description && <p className="text-destructive text-sm mt-1">{state.errors.description[0]}</p>}
-          </div>
+          <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="col-span-3" placeholder="A brief description of the subject"/>
         </div>
       </div>
       <DialogFooter>
         <DialogClose asChild>
-            <Button variant="ghost">Cancel</Button>
+            <Button variant="ghost" type="button">Cancel</Button>
         </DialogClose>
-        <SubmitButton>{subject ? "Save Changes" : "Create Subject"}</SubmitButton>
+        <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isSubmitting ? "Saving..." : (subject ? "Save Changes" : "Create Subject")}
+        </Button>
       </DialogFooter>
     </form>
   );
@@ -121,10 +114,12 @@ function SubjectForm({
 function DeleteSubjectDialog({ subjectId, onDeleted }: { subjectId: string, onDeleted: () => void }) {
     const {toast} = useToast();
     const handleDelete = async () => {
-        const result = await deleteSubjectAction(subjectId);
-        if (result.message) {
-            toast({ title: "Success", description: result.message });
+        try {
+            await deleteSubject(subjectId);
+            toast({ title: "Success", description: "Subject deleted successfully." });
             onDeleted();
+        } catch(e: any) {
+            toast({ title: "Error", description: e.message, variant: "destructive" });
         }
     }
     return (

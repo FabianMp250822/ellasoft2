@@ -15,7 +15,7 @@ export const createAcademicPeriod = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "The function must be called while authenticated.");
   }
 
-  const { organizationId, name, startDate, endDate } = request.data;
+  const {organizationId, name, startDate, endDate} = request.data;
   const uid = request.auth.uid;
   const tokenOrgId = request.auth.token.organizationId;
 
@@ -23,11 +23,11 @@ export const createAcademicPeriod = onCall(async (request) => {
   if (!organizationId || !name || !startDate || !endDate) {
     throw new HttpsError("invalid-argument", "The function must be called with 'organizationId', 'name', 'startDate', and 'endDate' arguments.");
   }
-  
+
   // 3. Security Check: Ensure the user belongs to the organization they're trying to modify.
   if (organizationId !== tokenOrgId) {
-      logger.warn(`User ${uid} attempted to create a period for org ${organizationId} but belongs to ${tokenOrgId}.`);
-      throw new HttpsError("permission-denied", "You can only create academic periods for your own organization.");
+    logger.warn(`User ${uid} attempted to create a period for org ${organizationId} but belongs to ${tokenOrgId}.`);
+    throw new HttpsError("permission-denied", "You can only create academic periods for your own organization.");
   }
 
 
@@ -41,13 +41,12 @@ export const createAcademicPeriod = onCall(async (request) => {
     };
 
     const docRef = await db.collection("academicPeriods").add(periodData);
-    
+
     const successMessage = `Successfully created academic period '${name}' with ID ${docRef.id} for organization ${organizationId}.`;
     logger.info(successMessage);
-    
-    // The onCall function should return a JSON-serializable object.
-    return { success: true, message: successMessage, periodId: docRef.id };
 
+    // The onCall function should return a JSON-serializable object.
+    return {success: true, message: successMessage, periodId: docRef.id};
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     logger.error(`Error creating academic period for organization ${organizationId}:`, error);

@@ -39,26 +39,16 @@ import {
     AlertDialogTrigger,
   } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2 } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import type { AcademicPeriod } from "@/lib/data";
-import { useFormStatus } from "react-dom";
-import { useActionState } from "react";
-import { createPeriodAction, updatePeriodAction, deletePeriodAction, type ActionState } from "./actions";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
-import { getAcademicPeriods } from "@/lib/data";
+import { getAcademicPeriods, deleteAcademicPeriod, updateAcademicPeriod } from "@/lib/data";
 import { LoadingSpinner } from "@/components/loading-spinner";
-
-function SubmitButton({ children }: { children: React.ReactNode }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Saving..." : children}
-    </Button>
-  );
-}
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/lib/firebase";
 
 function PeriodForm({
   period,
@@ -69,63 +59,70 @@ function PeriodForm({
   organizationId: string;
   onClose: () => void;
 }) {
-  const action = period ? updatePeriodAction : createPeriodAction;
-  const [state, dispatch] = useActionState<ActionState, FormData>(action, { message: null, errors: {}, success: false });
+  const [name, setName] = React.useState(period?.name || "");
+  const [startDate, setStartDate] = React.useState(period?.startDate ? format(period.startDate, "yyyy-MM-dd") : "");
+  const [endDate, setEndDate] = React.useState(period?.endDate ? format(period.endDate, "yyyy-MM-dd") : "");
+  const [isSubmitting, setSubmitting] = React.useState(false);
   const { toast } = useToast();
 
-  React.useEffect(() => {
-    if (state.message) {
-      if (state.success) {
-        toast({ title: "Success", description: state.message });
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSubmitting(true);
+    
+    try {
+        if (period) {
+            // Update logic
+            await updateAcademicPeriod(period.id, { name, startDate: new Date(startDate), endDate: new Date(endDate) });
+            toast({ title: "Success", description: "Period updated successfully." });
+        } else {
+            // Create logic
+            const createAcademicPeriodFn = httpsCallable(functions, 'createAcademicPeriod');
+            const result = await createAcademicPeriodFn({ organizationId, name, startDate, endDate });
+            const resultData = result.data as { success: boolean; message: string; };
+            if (!resultData.success) {
+                throw new Error(resultData.message || "Cloud function returned failure.");
+            }
+            toast({ title: "Success", description: "Period created successfully." });
+        }
         onClose();
-      } else {
-        toast({ title: "Error", description: state.message, variant: "destructive" });
-      }
+    } catch (error: any) {
+        console.error("Error submitting form:", error);
+        toast({ title: "Error", description: error.message || "An unexpected error occurred.", variant: "destructive" });
+    } finally {
+        setSubmitting(false);
     }
-  }, [state, toast, onClose]);
-
-  const formatDateForInput = (date: Date | undefined) => {
-    return date ? format(date, "yyyy-MM-dd") : "";
   };
 
   return (
-    <form action={dispatch}>
-      <input type="hidden" name="organizationId" value={organizationId} />
-      {period && <input type="hidden" name="id" value={period.id} />}
+    <form onSubmit={handleSubmit}>
       <div className="grid gap-4 py-4">
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="name" className="text-right">
             Name
           </Label>
-          <div className="col-span-3">
-            <Input id="name" name="name" defaultValue={period?.name} />
-            {state.errors?.name && <p className="text-destructive text-sm mt-1">{state.errors.name[0]}</p>}
-          </div>
+          <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="startDate" className="text-right">
             Start Date
           </Label>
-          <div className="col-span-3">
-            <Input id="startDate" name="startDate" type="date" defaultValue={formatDateForInput(period?.startDate)} />
-            {state.errors?.startDate && <p className="text-destructive text-sm mt-1">{state.errors.startDate[0]}</p>}
-          </div>
+          <Input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="col-span-3" />
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="endDate" className="text-right">
             End Date
           </Label>
-          <div className="col-span-3">
-            <Input id="endDate" name="endDate" type="date" defaultValue={formatDateForInput(period?.endDate)} />
-            {state.errors?.endDate && <p className="text-destructive text-sm mt-1">{state.errors.endDate[0]}</p>}
-          </div>
+          <Input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="col-span-3" />
         </div>
       </div>
       <DialogFooter>
         <DialogClose asChild>
-            <Button variant="ghost">Cancel</Button>
+            <Button variant="ghost" type="button">Cancel</Button>
         </DialogClose>
-        <SubmitButton>{period ? "Save Changes" : "Create Period"}</SubmitButton>
+        <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isSubmitting ? "Saving..." : (period ? "Save Changes" : "Create Period")}
+        </Button>
       </DialogFooter>
     </form>
   );
@@ -134,12 +131,13 @@ function PeriodForm({
 function DeletePeriodDialog({ periodId, organizationId, onDeleted }: { periodId: string, organizationId: string, onDeleted: () => void }) {
     const {toast} = useToast();
     const handleDelete = async () => {
-        const result = await deletePeriodAction(periodId, organizationId);
-        if (result.success) {
-            toast({ title: "Success", description: result.message });
+        try {
+            await deleteAcademicPeriod(periodId);
+            toast({ title: "Success", description: "Period deleted successfully." });
             onDeleted();
-        } else {
-            toast({ title: "Error", description: result.message, variant: "destructive" });
+        } catch (e: any) {
+             const message = e.code === 'permission-denied' ? "Permission Denied: You do not have the required permissions." : `An error occurred: ${e.message}`;
+            toast({ title: "Error", description: message, variant: "destructive" });
         }
     }
     return (

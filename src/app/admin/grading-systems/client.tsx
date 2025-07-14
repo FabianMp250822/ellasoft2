@@ -39,27 +39,15 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2 } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { GradingSystem } from "@/lib/data";
-import { useFormStatus } from "react-dom";
-import { useActionState } from "react";
-import { createGradingSystemAction, updateGradingSystemAction, deleteGradingSystemAction } from "./actions";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
-import { getGradingSystems } from "@/lib/data";
+import { getGradingSystems, addGradingSystem, updateGradingSystem, deleteGradingSystem } from "@/lib/data";
 import { LoadingSpinner } from "@/components/loading-spinner";
-
-function SubmitButton({ children }: { children: React.ReactNode }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Saving..." : children}
-    </Button>
-  );
-}
 
 function GradingSystemForm({
   system,
@@ -70,81 +58,81 @@ function GradingSystemForm({
   organizationId: string;
   onClose: () => void;
 }) {
-  const action = system ? updateGradingSystemAction : createGradingSystemAction;
-  const [state, dispatch] = useActionState(action, { message: null, errors: {} });
+  const [name, setName] = React.useState(system?.name || "");
+  const [description, setDescription] = React.useState(system?.description || "");
+  const [scale, setScale] = React.useState(system?.scale || "");
+  const [isSubmitting, setSubmitting] = React.useState(false);
   const { toast } = useToast();
 
-  React.useEffect(() => {
-    if (state.message) {
-      if(Object.keys(state.errors || {}).length > 0) {
-        toast({ title: "Error", description: state.message, variant: "destructive" });
-      } else {
-        toast({ title: "Success", description: state.message });
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+        if (system) {
+            await updateGradingSystem(system.id, { name, description, scale });
+            toast({ title: "Success", description: "Grading system updated successfully." });
+        } else {
+            await addGradingSystem(organizationId, { name, description, scale });
+            toast({ title: "Success", description: "Grading system created successfully." });
+        }
         onClose();
-      }
+    } catch (error: any) {
+        console.error("Error submitting form:", error);
+        toast({ title: "Error", description: error.message || "An unexpected error occurred.", variant: "destructive" });
+    } finally {
+        setSubmitting(false);
     }
-  }, [state, toast, onClose]);
+  };
   
 
   return (
-    <form action={dispatch}>
-      <input type="hidden" name="organizationId" value={organizationId} />
-      {system && <input type="hidden" name="id" value={system.id} />}
+    <form onSubmit={handleSubmit}>
       <div className="grid gap-4 py-4">
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="name" className="text-right">
             Name
           </Label>
-          <div className="col-span-3">
-            <Input
+          <Input
               id="name"
-              name="name"
-              defaultValue={system?.name}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Numerical (0-5)"
+              className="col-span-3"
             />
-            {state?.errors?.name && (
-              <p className="text-destructive text-sm mt-1">{state.errors.name[0]}</p>
-            )}
-          </div>
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="description" className="text-right">
             Description
           </Label>
-          <div className="col-span-3">
-            <Textarea
+          <Textarea
               id="description"
-              name="description"
-              defaultValue={system?.description}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe the grading system"
+              className="col-span-3"
             />
-            {state?.errors?.description && (
-              <p className="text-destructive text-sm mt-1">{state.errors.description[0]}</p>
-            )}
-          </div>
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="scale" className="text-right">
             Scale
           </Label>
-          <div className="col-span-3">
-            <Input
+          <Input
               id="scale"
-              name="scale"
-              defaultValue={system?.scale}
+              value={scale}
+              onChange={(e) => setScale(e.target.value)}
               placeholder="e.g., 0.0-5.0"
+              className="col-span-3"
             />
-            {state?.errors?.scale && (
-              <p className="text-destructive text-sm mt-1">{state.errors.scale[0]}</p>
-            )}
-          </div>
         </div>
       </div>
       <DialogFooter>
         <DialogClose asChild>
-          <Button variant="ghost">Cancel</Button>
+          <Button variant="ghost" type="button">Cancel</Button>
         </DialogClose>
-        <SubmitButton>{system ? "Save Changes" : "Create System"}</SubmitButton>
+        <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isSubmitting ? "Saving..." : (system ? "Save Changes" : "Create System")}
+        </Button>
       </DialogFooter>
     </form>
   );
@@ -153,10 +141,12 @@ function GradingSystemForm({
 function DeleteSystemDialog({ systemId, onDeleted }: { systemId: string, onDeleted: () => void }) {
     const {toast} = useToast();
     const handleDelete = async () => {
-        const result = await deleteGradingSystemAction(systemId);
-        if (result.message) {
-            toast({ title: "Success", description: result.message });
+        try {
+            await deleteGradingSystem(systemId);
+            toast({ title: "Success", description: "Grading system deleted successfully." });
             onDeleted();
+        } catch (e: any) {
+            toast({ title: "Error", description: e.message, variant: "destructive" });
         }
     }
     return (
