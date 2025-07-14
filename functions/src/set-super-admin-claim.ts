@@ -1,4 +1,4 @@
-import { onRequest } from "firebase-functions/v2/https";
+import {onRequest} from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 
@@ -13,11 +13,15 @@ export const setSuperAdminClaim = onRequest(async (request, response) => {
   const email = "fabianmunozpuello@gmail.com";
 
   try {
-    await admin.auth().setCustomUserClaims(uid, { superadmin: true });
-    logger.info(`Successfully set superadmin claim for user: ${email} (UID: ${uid})`);
-    response.status(200).send(`Successfully set superadmin claim for user: ${email}`);
+    await admin.auth().setCustomUserClaims(uid, {superadmin: true});
+    logger.info(
+      `Successfully set superadmin claim for user: ${email} (UID: ${uid})`
+    );
+    response.status(200)
+      .send(`Successfully set superadmin claim for user: ${email}`);
   } catch (error) {
     logger.error(`Error setting superadmin claim for user: ${uid}`, error);
-    response.status(500).send(`Error setting superadmin claim. Check logs for details.`);
+    response.status(500)
+      .send("Error setting superadmin claim. Check logs for details.");
   }
 });

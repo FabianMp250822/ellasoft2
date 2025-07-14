@@ -8,8 +8,8 @@
  */
 
 import * as admin from "firebase-admin";
-import { setSuperAdminClaim } from "./set-super-admin-claim";
+import {setSuperAdminClaim} from "./set-super-admin-claim";
 
 admin.initializeApp();
 
-export { setSuperAdminClaim };
+export {setSuperAdminClaim};
