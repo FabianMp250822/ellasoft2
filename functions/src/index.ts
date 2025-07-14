@@ -15,6 +15,7 @@ export {savePerformanceIndicators} from "./organizations/save-performance-indica
 export {getPerformanceIndicatorsByOrg} from "./organizations/get-performance-indicators";
 export {createTeacher} from "./organizations/create-teacher";
 export {createStudent} from "./organizations/create-student";
+export {getStudentsByGrade} from "./organizations/get-students-by-grade";
 export {createGradingSystem} from "./organizations/create-grading-system";
 export {createGrade} from "./organizations/create-grade";
 export {createSubject} from "./organizations/create-subject";

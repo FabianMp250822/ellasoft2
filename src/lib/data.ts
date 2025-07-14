@@ -254,10 +254,14 @@ export async function getStudents(organizationId: string): Promise<Student[]> {
 }
 
 export async function getStudentsByGrade(gradeId: string): Promise<Student[]> {
-    const studentsCol = collection(db, "students");
-    const q = query(studentsCol, where("gradeId", "==", gradeId));
-    const studentsSnapshot = await getDocs(q);
-    return studentsSnapshot.docs.map(d => d.data() as Student);
+  try {
+    const getStudentsByGradeFn = httpsCallable(functions, 'getStudentsByGrade');
+    const result = await getStudentsByGradeFn({ gradeId });
+    return result.data as Student[];
+  } catch (error) {
+    console.error(`Error fetching students for grade ${gradeId} via function:`, error);
+    throw error;
+  }
 }
 
 
