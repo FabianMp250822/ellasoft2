@@ -1,15 +1,23 @@
+
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow public read on logos and admin photos
+    
+    // Allow public read access to logos and photos
     match /logos/{allPaths=**} {
       allow read;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null; // Only authenticated users can write
     }
+
     match /admin_photos/{allPaths=**} {
       allow read;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null; // Only authenticated users can write
+    }
+
+    // Default deny for all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
   }
 }
