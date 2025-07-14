@@ -200,10 +200,9 @@ export function CreateOrganizationForm({ onSuccess, onCancel }: CreateOrganizati
                   </div>
                </div>
             </div>
-
           </div>
         </ScrollArea>
-        <DialogFooter className="sticky bottom-0 bg-background pt-4 pb-1 -mx-6 px-6">
+        <DialogFooter className="sticky bottom-0 bg-background pt-4">
             <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Creating..." : "Create Organization"}
